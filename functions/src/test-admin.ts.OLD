@@ -1,0 +1,28 @@
+// functions/src/test-admin.ts
+import * as admin from 'firebase-admin';
+
+// Questa funzione NON deve chiamare initializeApp()
+// perché dovrebbe essere già fatto in index.ts
+
+export const testAdminFirestore = Function.https.onCall(async (data, context) => {
+  console.log('🧪 Test admin.firestore...');
+  
+  // Verifica che admin.firestore sia definito
+  if (!admin.firestore) {
+    console.error('❌ admin.firestore è undefined!');
+    return { success: false, error: 'admin.firestore undefined' };
+  }
+  
+  console.log('✅ admin.firestore è definito');
+  
+  // Prova a creare un Timestamp
+  try {
+    const now = new Date();
+    const ts = admin.firestore.Timestamp.fromDate(now);
+    console.log('✅ Timestamp creato:', ts.toDate());
+    return { success: true, timestamp: ts.toDate().toISOString() };
+  } catch (error: any) {
+    console.error('❌ Errore creando Timestamp:', error.message);
+    return { success: false, error: error.message };
+  }
+});

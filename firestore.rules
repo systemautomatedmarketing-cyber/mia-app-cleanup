@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Utenti: solo l'utente può leggere/scrivere il proprio documento
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Permetti alle Cloud Functions di scrivere (per notifiche)
+      allow update: if request.auth == null && 
+        get(/databases/$(database)/documents/users/$(userId)).data.fcmToken != null;
+    }
+    
+    // Tasks: solo l'utente proprietario
+    match /tasks/{taskId} {
+      allow read, write: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+    }
+  }
+}
