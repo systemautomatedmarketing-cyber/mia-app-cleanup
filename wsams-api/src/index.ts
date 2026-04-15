@@ -797,7 +797,7 @@ if (day >= 2) {
     title: `Inserisci KPI di ieri (Giorno ${prevDay})`,
     instructions: "Inserisci DM inviati, conversazioni, contatti interessati, vendite e note.",
     estimated_time: 3,
-    platform: "BOTH",
+    platform: "ALL",
     product_type: "ALL",
     goal: "ALL",
     time_mode: 3, //String(onboarding.time_mode),

@@ -54,7 +54,8 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
 
   const isLockedKPI = task?.task_type === "KPI"; 
 // 🔢 Conta quante volte il task è stato rimandato (per avviso ≥3)
-  const deferCount = task?.__deferCount ?? 0;
+//  const deferCount = task?.__deferCount ?? 0;
+  const deferCount = user.currentDay - task.day ?? 0;
   const isHeavilyDeferred = deferCount >= 2;
 
   const qc = useQueryClient();
@@ -334,13 +335,13 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
                 </div>
               )}
 
-{ console.log("isPending: ", isPending)}
+{/* console.log("isPending: ", isPending)*/}
 
               <div className="flex gap-2 justify-end pt-2 border-t border-border">
 
-{ console.log("task.title: ", task.title)}
-{ console.log("task.task_type: ", task?.task_type)}
-{ console.log("isLockedKPI: ", isLockedKPI)}
+{/* console.log("task.title: ", task.title) */}
+{/* console.log("task.task_type: ", task?.task_type) */}
+{/* console.log("isLockedKPI: ", isLockedKPI) */}
 
 
                 {isPending && (
@@ -405,14 +406,14 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
 
     console.log("📤 [DEBUG] Chiamata deferTask con:", {
       uid: user.id,
-      fromDay: task.day,
+      fromDay: user.currentDay ?? task.day, //task.day,
       taskTitle: task.title,
       hasReplacement: !!replacement,
     });
 
                         await deferTask({
                           uid: user.id, 	
-                          fromDay: task.day,
+                          fromDay: user.currentDay ?? task.day, //task.day,
                           task,
 replacementTaskSnapshot: replacement
           ? { ...replacement, day: task.day } // 👈 per farlo risultare “di oggi”

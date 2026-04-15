@@ -68,26 +68,87 @@ if (!task?.task_id) throw new Error("deferTask: task.task_id mancante");
     const fromData: DeferralsDoc = fromSnap.exists() ? (fromSnap.data() as DeferralsDoc) : {};
     const toData: DeferralsDoc = toSnap.exists() ? (toSnap.data() as DeferralsDoc) : {};
 
+// ─────────────────────────────────────
+  // 🔹 STEP 1: Rimuovi task da carryOver di fromDay (se presente)
+  // Questo gestisce i task iniettati che vengono rimandati di nuovo
+  // ─────────────────────────────────────
+  let fromCarry: CarryTask[] = Array.isArray(fromData.carryOver) ? [...fromData.carryOver] : [];
+  
+  // Cerca il task in carryOver con matching flessibile:
+  const carryIndex = fromCarry.findIndex((c) => {
+    // Match 1: originalTaskId === task.task_id (task normali)
+    if (c.originalTaskId === task.task_id) return true;
+    // Match 2: taskSnapshot.task_id === task.task_id (task iniettati)
+    if (c.taskSnapshot?.task_id === task.task_id) return true;
+    // Match 3: __carryOriginalTaskId fallback (task iniettati con riferimento all'originale)
+    if (task.__carryOriginalTaskId && c.originalTaskId === task.__carryOriginalTaskId) return true;
+    return false;
+  });
+  
+  const wasInCarryOver = carryIndex !== -1;
+  if (wasInCarryOver) {
+    fromCarry.splice(carryIndex, 1);
+    console.log(`[deferTask] ✅ Rimosso da carryOver giorno ${fromDay}:`, task.task_id);
+  }
+
+  // ─────────────────────────────────────
+  // 🔹 STEP 2: Aggiungi a hiddenTaskIds SOLO se NON era in carryOver
+  // (i task "normali" dalla lista principale vanno nascosti)
+  // ─────────────────────────────────────
+
     const hidden = new Set(fromData.hiddenTaskIds ?? []);
+if (!wasInCarryOver) {
     hidden.add(task.task_id);
+}
+
+  // ─────────────────────────────────────
+  // 🔹 STEP 3: Aggiungi task a carryOver di toDay (giorno destinazione)
+  // ─────────────────────────────────────
 
     const carry: CarryTask[] = Array.isArray(toData.carryOver) ? [...toData.carryOver] : [];
 
     // evita doppi rimandi uguali
-    const already = carry.some((c) => c.originalTaskId === task.task_id && c.originalDay === fromDay);
+//    const already = carry.some((c) => c.originalTaskId === task.task_id && c.originalDay === fromDay);
+    const already = carry.some((c) => 
+      c.originalTaskId === task.task_id || 
+      c.taskSnapshot?.task_id === task.task_id ||
+      (task.__carryOriginalTaskId && c.originalTaskId === task.__carryOriginalTaskId)
+    );
+
     if (!already) {
       carry.unshift({
         originalDay: fromDay,
-        originalTaskId: task.task_id,
+//        originalTaskId: task.task_id,
+        originalTaskId: task.__carryOriginalTaskId || task.task_id,
         taskSnapshot: task,
       });
+console.log(`[deferTask] ✅ Aggiunto a carryOver giorno ${toDay}:`, task.task_id);
     }
 
-    tx.set(fromRef, { hiddenTaskIds: [...hidden], updatedAt: serverTimestamp() }, { merge: true });
-    tx.set(toRef, { carryOver: carry, updatedAt: serverTimestamp() }, { merge: true });
+//    tx.set(fromRef, { hiddenTaskIds: [...hidden], updatedAt: serverTimestamp() }, { merge: true });
+//    tx.set(toRef, { carryOver: carry, updatedAt: serverTimestamp() }, { merge: true });
+
+// ─────────────────────────────────────
+// 🔹 STEP 4: Scrivi gli aggiornamenti su entrambi i documenti
+// ─────────────────────────────────────
+
+    tx.set(fromRef, { 
+      hiddenTaskIds: [...hidden], 
+      carryOver: fromCarry,  // ← carryOver aggiornato SENZA il task rimandato
+      updatedAt: serverTimestamp() 
+    }, { merge: true });
+
+    tx.set(toRef, { 
+      carryOver: carry,    // ← carryOver aggiornato CON il task rimandato
+      updatedAt: serverTimestamp() 
+    }, { merge: true });
 
     // Se c'è sostituzione: mettiamo il sostitutivo "oggi" come carryOver locale
     // (così appare subito nella lista senza toccare backend)
+
+// ─────────────────────────────────────
+// 🔹 STEP 5: Gestione task sostitutivo (se presente) - INALTERATO
+// ─────────────────────────────────────
     if (replacementTaskSnapshot) {
       const todayCarry: CarryTask[] = Array.isArray(fromData.carryOver) ? [...fromData.carryOver] : [];
       todayCarry.unshift({
@@ -101,7 +162,7 @@ console.log("[deferTask] Replacement task aggiunto:", replacementTaskSnapshot.ti
 
     }
   });
- console.log("[deferTask] Transazione completata con successo");
+ console.log(`[deferTask] 🔄 Transazione completata: ${task.task_id} da giorno ${fromDay} a ${toDay}`);
   // ✅ FINE: Nessun codice extra, la transazione ha già fatto tutto
 }
 

@@ -3,6 +3,15 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// 🔍 Import tipi per i filtri (dal file che abbiamo creato)
+import type { 
+  UserFilterSettings, 
+  Platform, 
+  SalesType, 
+  MainGoal, 
+  ExperienceLevel 
+} from "./filters";
+
 // === TABLE DEFINITIONS ===
 
 export const users = pgTable("users", {
@@ -22,6 +31,19 @@ export const users = pgTable("users", {
     target?: string;
     tone?: string;
   }>(),
+ // ─────────────────────────────────────
+  // 🔍 NUOVI CAMPI PER FILTRI (AGGIUNGI QUI)
+  // ─────────────────────────────────────
+  
+  // Impostazioni filtri (JSON strutturato)
+  filterSettings: jsonb("filter_settings").$type<UserFilterSettings>(),
+  
+  // Profilo utente per matching con i task
+  experienceLevel: varchar("experience_level", { length: 20 }), // "Principiante" | "Intermedio" | "Avanzato"
+  platforms: jsonb("platforms").$type<Platform[]>(),            // Array di stringhe
+  salesTypes: jsonb("sales_types").$type<SalesType[]>(),        // Array di stringhe  
+  mainGoal: varchar("main_goal", { length: 50 }),               // "Generare Lead" | ...
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -112,6 +134,19 @@ export const insertKpiEntrySchema = createInsertSchema(kpiEntries).omit({ id: tr
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
+// ─────────────────────────────────────
+// 🔍 AGGIORNA IL TIPO User CON I NUOVI CAMPI
+// ─────────────────────────────────────
+// Se usi $inferSelect (consigliato), Drizzle lo aggiorna automaticamente ✅
+// Ma per chiarezza e autocomplete, puoi estendere esplicitamente:
+export type UserWithFilters = User & {
+  filterSettings?: UserFilterSettings;
+  experienceLevel?: ExperienceLevel;
+  platforms?: Platform[];
+  salesTypes?: SalesType[];
+  mainGoal?: MainGoal;
+};
+
 export type UserTask = typeof userTasks.$inferSelect;
 export type InsertUserTask = z.infer<typeof insertUserTaskSchema>;
 
@@ -127,11 +162,16 @@ export interface Task {
   title: string;
   instructions: string;
   estimated_time: string;
-  platform: string;
-  product_type: string;
-  goal: string;
   time_mode: string;
-  level: string;
+// 🔍 CAMPI DAL FOGLIO (nomi snake_case o come nel foglio)
+//  platform: string;
+//  product_type: string;
+//  goal: string;
+//  level: string;
+  level?: string;              // ← "BEGINNER", "INTERMEDIATE", etc.
+  platform?: string | string[]; // ← "Instagram", "ALL", etc.
+  product_type?: string | string[]; // ← "Digitale", "Coaching/Servizio", etc.
+  goal?: string;               // ← "DM", "BRAND", "SALES", "FOLLOWER"
   kpi_name?: string;
   kpi_target?: string;
   fallback_task_id?: string;

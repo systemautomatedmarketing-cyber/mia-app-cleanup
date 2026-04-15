@@ -39,25 +39,43 @@ self.addEventListener("notificationclick", (event) => {
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Notifica received:', payload);
   
-  const { title, body, icon, click_action } = payload.notification;
+//  const { title, body, icon, click_action } = payload.notification;
   
+  const { title, body, image } = payload.notification || {};
+  const clickAction = payload.data?.click_action || "/";
+  
+//  self.registration.showNotification(title, {
+//    body,
+//    icon: icon || '/icon-192.png',
+//    data: { url: click_action || '/' },
+//  });
+
   self.registration.showNotification(title, {
-    body,
-    icon: icon || '/icon-192.png',
-    data: { url: click_action || '/' },
+    body: body || "",
+    icon: image || "/icon-192.png",
+    badge: "/icon-192.png",
+    tag: "social-growth-notification", // Evita notifiche duplicate
+    renotify: true,
+     {
+      url: clickAction,
+      focus: true,
+    },
   });
+
+
 });
 
 // Gestisci click sulla notifica
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+
   const urlToOpen = event.notification.data?.url || '/';
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((windowClients) => {
         // Se c'è già una finestra aperta, focalizzala
-        for (let client of windowClients) {
+        for (const client of windowClients) {
           if (client.url.includes(urlToOpen) && 'focus' in client) {
             return client.focus();
           }
