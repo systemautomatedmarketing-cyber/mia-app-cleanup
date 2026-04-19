@@ -153,42 +153,158 @@ export type InsertUserTask = z.infer<typeof insertUserTaskSchema>;
 export type KpiEntry = typeof kpiEntries.$inferSelect;
 export type InsertKpiEntry = z.infer<typeof insertKpiEntrySchema>;
 
-// Custom Types for Frontend
+export type TaskStatus = 'draft' | 'active' | 'archived';
+export type Platform = 'instagram' | 'facebook' | 'linkedin' | 'tiktok' | 'twitter' | 'all';
+export type ProductType = 'digitale' | 'coaching' | 'servizio' | 'ecommerce' | 'altro';
+export type GoalType = 'dm' | 'brand' | 'sales' | 'follower' | 'engagement';
+export type LevelType = 'beginner' | 'intermediate' | 'advanced';
+export type UnlockType = 'none' | 'pro' | 'credits' | 'streak';
+export type AiComplexity = 'low' | 'medium' | 'high';
+export type AiOutputType = 'text' | 'image-prompt' | 'json';
+export type TimeMode = 'fixed' | 'range' | 'flexible';
+
 export interface Task {
+  // 🔹 CAMPI OBBLIGATORI (core)
   day: number;
   task_id: string;
   task_order: number;
   task_type: string;
   title: string;
   instructions: string;
-  estimated_time: string;
-  time_mode: string;
-// 🔍 CAMPI DAL FOGLIO (nomi snake_case o come nel foglio)
-//  platform: string;
-//  product_type: string;
-//  goal: string;
-//  level: string;
-  level?: string;              // ← "BEGINNER", "INTERMEDIATE", etc.
-  platform?: string | string[]; // ← "Instagram", "ALL", etc.
-  product_type?: string | string[]; // ← "Digitale", "Coaching/Servizio", etc.
-  goal?: string;               // ← "DM", "BRAND", "SALES", "FOLLOWER"
-  kpi_name?: string;
-  kpi_target?: string;
+  estimated_time: string; // es: "5 min", "10-15 min"
+  time_mode: TimeMode; //'fixed' | 'range' | 'flexible';
+  
+  // 🔹 CAMPI DI FILTRO (opzionali ma tipizzati)
+  level?: LevelType;
+  platform?: Platform | Platform[];
+  product_type?: ProductType | ProductType[];
+  goal?: GoalType;
+  
+  // 🔹 KPI & METRICHE
+  kpi_name?: string;        // es: "Profile Visits"
+  kpi_target?: string;      // es: "+20%"
+  
+  // 🔹 LOGICA TASK
   fallback_task_id?: string;
-  critical_task?: string;
-  ai_support_available?: string;
+  critical_task?: 'true' | 'false'; // mantengo string per compatibilità foglio
+  
+  // 🔹 AI CONFIG (tipizzati)
+  ai_support_available?: 'true' | 'false';
   ai_feature_id?: string;
   ai_feature_label?: string;
-  ai_prompt_template?: string;
-  ai_variables?: string;
-  ai_output_type?: string;
-  ai_complexity?: string;
-  pro_only?: string;
-  credits_cost?: string;
-  unlock_type?: string;
-  ai_visible_trigger?: string;
+  ai_prompt_template?: string;      // template con {variables}
+  ai_variables?: Record<string, any>; // ← JSON parsato, non string!
+  ai_output_type?: AiOutputType; //'text' | 'image-prompt' | 'json';
+  ai_complexity?: AiComplexity; //'low' | 'medium' | 'high';
+  
+  // 🔹 MONETIZZAZIONE (tipi corretti!)
+  pro_only?: boolean;               // ← BOOLEANO, non string!
+  credits_cost?: number;            // ← NUMBER, non string!
+  unlock_type?: UnlockType; //'none' | 'pro' | 'credits' | 'streak';
+  ai_visible_trigger?: 'always' | 'after-completion' | 'pro-only';
+  
+  // 🔹 INTERNI
   internal_notes?: string;
-  status?: string; // Merged from DB
+  status?: TaskStatus;
+  
+  // 🔹 CAMPI AGGIUNTIVI PER UX
+  expected_result?: string;         // es: "+15-30 profile visits"
+  why_it_works?: string;            // spiegazione breve per l'utente
+
+ // ── CAMPI TEMPORANEI PER LOGICA FRONTEND (opzionali) ──
+  __injected?: boolean;              // task iniettato da defer/sostituzione
+  __carryOriginalTaskId?: string;    // ID del task originale se iniettato
+  __deferCount?: number;             // quante volte è stato rimandato
+
+}
+
+
+// ─────────────────────────────────────────────
+// HELPER: Converte dati grezzi da Google Sheets in Task tipizzato
+// Usalo quando recuperi i task dal foglio elettronico
+// ─────────────────────────────────────────────
+export function parseTaskFromSheet(data: Record<string, any>): Task {
+  // Funzione sicura per parsare JSON da stringa
+  const safeJsonParse = (str: any): Record<string, any> | undefined => {
+    if (!str || typeof str !== 'string') return undefined;
+    try {
+      return JSON.parse(str);
+    } catch {
+      return undefined;
+    }
+  };
+
+  // Validazione status
+  const validStatuses: TaskStatus[] = ['draft', 'active', 'archived'];
+  const parseStatus = (s?: any): TaskStatus | undefined => {
+    if (!s) return undefined;
+    const status = String(s).toLowerCase();
+    return validStatuses.includes(status as TaskStatus) ? (status as TaskStatus) : undefined;
+  };
+
+  // Conversione boolean da stringa ("true"/"false") o booleano reale
+  const parseBoolean = (val: any): boolean | undefined => {
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') return val.toLowerCase() === 'true';
+    return undefined;
+  };
+
+  // Conversione number da stringa
+  const parseNumber = (val: any): number | undefined => {
+    if (typeof val === 'number') return val;
+    if (typeof val === 'string') {
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    }
+    return undefined;
+  };
+
+  return {
+    // Campi obbligatori (assumo siano già corretti dal foglio)
+    day: Number(data.day) || 1,
+    task_id: String(data.task_id),
+    task_order: Number(data.task_order) || 0,
+    task_type: String(data.task_type),
+    title: String(data.title),
+    instructions: String(data.instructions),
+    estimated_time: String(data.estimated_time),
+    time_mode: (['fixed', 'range', 'flexible'].includes(data.time_mode) 
+      ? data.time_mode 
+      : 'fixed') as TimeMode,
+    
+    // Campi opzionali con parsing sicuro
+    level: data.level?.toLowerCase() as LevelType | undefined,
+    platform: data.platform, // può essere string o string[], lascio flessibile
+    product_type: data.product_type,
+    goal: data.goal?.toLowerCase() as GoalType | undefined,
+    
+    kpi_name: data.kpi_name,
+    kpi_target: data.kpi_target,
+    
+    fallback_task_id: data.fallback_task_id,
+    critical_task: data.critical_task, // mantengo string per compatibilità
+    
+    ai_support_available: data.ai_support_available,
+    ai_feature_id: data.ai_feature_id,
+    ai_feature_label: data.ai_feature_label,
+    ai_prompt_template: data.ai_prompt_template,
+    ai_variables: safeJsonParse(data.ai_variables),
+    ai_output_type: data.ai_output_type as AiOutputType | undefined,
+    ai_complexity: data.ai_complexity as AiComplexity | undefined,
+    
+    // ⚠️ CONVERSIONI CRITICHE (da string a tipo corretto)
+    pro_only: parseBoolean(data.pro_only),
+    credits_cost: parseNumber(data.credits_cost),
+    unlock_type: data.unlock_type as UnlockType | undefined,
+    ai_visible_trigger: data.ai_visible_trigger,
+    
+    internal_notes: data.internal_notes,
+    status: parseStatus(data.status),
+    
+    // Campi UX
+    expected_result: data.expected_result,
+    why_it_works: data.why_it_works,
+  };
 }
 
 export interface DayState {
@@ -199,3 +315,4 @@ export interface DayState {
 }
 
 export type OnboardingData = NonNullable<User['onboarding']>;
+

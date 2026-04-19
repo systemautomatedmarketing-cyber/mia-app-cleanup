@@ -5,6 +5,7 @@ import * as admin from "firebase-admin";
 import express from "express";
 import cors from "cors";
 import { readSheet } from "./api/sheets";
+import { onCall } from 'firebase-functions/v2/https';
 
 const TRIAL_DAYS = 40;
 const TRIAL_MS = TRIAL_DAYS * 24 * 60 * 60 * 1000;
@@ -22,6 +23,26 @@ if (!admin.apps.length) {
 
 export { sendDailyNotifications } from './notifications/dailyNotification';
 //export { testAdminFirestore } from './test-admin';
+
+//export { generateTaskAI } from './api/ai';
+
+// ✅ Nota: onCall di v2 richiede esplicitamente region e altre opzioni
+export const generateTaskAI = onCall(
+  { region: 'europe-west1', cors: true, memory: '256MiB' },
+  async (request) => {
+    // Log per debug
+    console.log("🤖 generateTaskAI chiamata da:", request.auth?.uid);
+    
+    // Risposta minimale per test
+    return { 
+      success: true, 
+      output: JSON.stringify({ 
+        content: "Task di test generato con successo!", 
+        tips: "Questo è un fallback di test." 
+      }) 
+    };
+  }
+);
 
 const app = express();
 app.use(cors({ origin: true }));
@@ -131,4 +152,4 @@ app.get("/api/tasks/today", async (req, res) => {
   }
 });
 
-export const api = onRequest({ region: "us-central1" }, app);
+export const api = onRequest({ region: "europe-west1" }, app);

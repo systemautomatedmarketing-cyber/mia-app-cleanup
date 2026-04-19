@@ -38,6 +38,15 @@ import { filterTasks } from "@/lib/taskFilters";
 
 import { FilterSettings } from "@/components/FilterSettings";
 
+import { useMemo } from "react";
+import { calculateProgressMetrics } from "@/hooks/use-progress-tracker";
+//import { ProgressSummary } from "@/components/ProgressSummary";
+import { HeaderProgress } from "@/components/HeaderProgress";
+
+import { useMonetizationTriggers } from "@/hooks/use-monitization-triggers";
+import { ProValuePreview } from "@/components/ProValuePreview";
+
+
 export default function Dashboard() {
 //  const { user } = useAuth();
   const { user, logoutMutation  } = useAuth();
@@ -160,6 +169,15 @@ useEffect(() => {
 
   const err = todayQuery.error as any;
 
+ // ✅ CALCOLO SICURO (solo per il trigger, non rompe i return)
+  const earlyCompletedCount = (data?.tasks || [])
+    .filter((t: any) => t.status === "Done")
+    .length;
+
+  // ✅ Monetizzazione value-gating
+ // ✅ HOOK DEVE ESSERE CHIAMA QUI (prima di qualsiasi return condizionale)
+  const { showProPrompt, dismissProPrompt, triggerMessage } = useMonetizationTriggers(user, earlyCompletedCount); 
+
   if (todayQuery.isError) {
 // TEMP    return <div>Errore caricamento: {(todayQuery.error as any)?.message}</div>;
 //    return <div>{String((todayQuery.error as any)?.message || todayQuery.error)}</div>
@@ -199,6 +217,30 @@ useEffect(() => {
       </div>
     );
   }
+
+// ✅ CALCOLA METRICHE PROGRESSO (con useMemo per performance)
+  const progressMetrics = useMemo(() => {
+ // 🔍 DEBUG: stampa cosa stiamo passando
+    console.log("🔍 [ProgressDebug] todayQuery.data?.tasks:", todayQuery.data?.tasks);
+    console.log("🔍 [ProgressDebug] user?.onboarding:", user?.onboarding);
+    
+    const completedIds = (todayQuery.data?.tasks || [])
+      .filter((t: any) => t.status === "Done")
+      .map((t: any) => t.task_id);
+    
+    console.log("🔍 [ProgressDebug] completedIds:", completedIds);
+
+    const metrics = calculateProgressMetrics(
+      todayQuery.data?.tasks || [],
+      user?.onboarding,
+      completedIds,
+      user?.currentDay || 1
+    );
+
+    console.log("🔍 [ProgressDebug] metrics calcolate:", metrics);
+
+    return metrics;
+  }, [todayQuery.data?.tasks, user?.onboarding, user?.currentDay]);
 
   if (isLoading || !user) {
     return (
@@ -252,6 +294,7 @@ const tasksForUI = filterTasks(
     tasksForUI.filter(
       (t: any) => t.status === "Done" || t.status === "Skipped",
     ).length || 0;
+  
   const isAllComplete = totalTasks > 0 && totalTasks === completedTasks;
   const progress = totalTasks
     ? Math.round((completedTasks / totalTasks) * 100)
@@ -295,11 +338,17 @@ const tasksForUI = filterTasks(
       <Navigation />
 
       <main className="flex-1 md:ml-0 pb-24 md:pb-8">
-        <header className="sticky top-0 z-40 bg-slate-50/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-display font-bold text-slate-900">
-              Giorno {user.currentDay}
-            </h2>
+        <header className="sticky top-0 z-40 bg-slate-60/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+          <div> 
+{/*            <h2 className="text-2xl font-display font-bold text-slate-900"> */}
+{/*              Giorno {user.currentDay} */}
+{/*            </h2> */}
+
+      {/* 📅 Giorno corrente (mobile) */}
+      <div className="md:bg-indigo-100 px-3 py-1.5 rounded-full border border-indigo-100"> 
+        <span className="text-xs font-bold text-indigo-900">Giorno {user.currentDay}</span>
+      </div> 
+
             <p className="text-sm text-slate-500 font-medium">
               {new Date().toLocaleDateString("it-IT", {
                 weekday: "long",
@@ -310,35 +359,51 @@ const tasksForUI = filterTasks(
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex flex-col items-end mr-4">
-              <span className="text-xs font-bold uppercase text-slate-400">
-                Progresso Giornaliero
-              </span>
+
+{/* ✅ NUOVO HEADER CON PROGRESS INTEGRATO */}
+<HeaderProgress 
+  metrics={progressMetrics}
+  credits={user?.creditsBalance || 0}
+  plan={user?.plan || 'FREE'}
+  currentDay={user?.currentDay || 1}
+/>
+
+{/*            <div className="bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm flex items-center gap-2"> */}
+{/*              <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" /> */}
+{/*              <span className="font-bold text-slate-700"> */}
+{/*                {user.creditsBalance} */}
+{/*              </span> */}
+{/*              <span className="text-xs text-slate-400 uppercase font-semibold"> */}
+{/*                Crediti */}
+{/*              </span> */}
+{/*            </div> */}
+
+      <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+        <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" />
+        <div className="flex flex-col items-end">
+
+{/*            <div className="hidden md:flex flex-col items-end mr-4"> */}
+{/*              <span className="text-xs font-bold uppercase text-slate-400"> */}
+{/*                Progresso Giornaliero */}
+{/*              </span> */}
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Progresso Giornaliero</span>
               <div className="w-32 h-2 bg-slate-200 rounded-full mt-1 overflow-hidden">
                 <div
                   className="h-full bg-indigo-600 transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-            </div>
+            </div> 
+</div>
 
-            <div className="bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" />
-              <span className="font-bold text-slate-700">
-                {user.creditsBalance}
-              </span>
-              <span className="text-xs text-slate-400 uppercase font-semibold">
-                Crediti
-              </span>
-            </div>
 
-            <div className="bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" />
-              <span className="font-bold text-slate-700">{user.plan}</span>
-              <span className="text-xs text-slate-400 uppercase font-semibold">
-                Piano Utente
-              </span>
-            </div>
+{/*            <div className="bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm flex items-center gap-2"> */}
+{/*              <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" /> */}
+{/*              <span className="font-bold text-slate-700">{user.plan}</span> */}
+{/*              <span className="text-xs text-slate-400 uppercase font-semibold"> */}
+{/*                Piano Utente */}
+{/*              </span> */}
+{/*            </div>  */}
           </div>
 
 {/* Mobile hamburger */}
@@ -419,6 +484,23 @@ const tasksForUI = filterTasks(
               </p>
             </div>
             <Trophy className="absolute right-4 bottom-[-20px] w-40 h-40 text-white opacity-10 rotate-12" />
+
+{/* ✅ Summary progresso in alto */}
+{/* <ProgressSummary */}
+{/*  metrics={progressMetrics} */}
+{/*  className="mb-6" */}
+{/* /> */}
+
+{/* 🔍 DEBUG: Se ProgressSummary non si vede, questo appare */}
+{/* {process.env.NODE_ENV === 'development' && ( */}
+{/*  <div className="p-3 bg-amber-100 border border-amber-300 rounded text-xs text-amber-900 mb-6"> */}
+{/*    <strong>Debug Info:</strong><br/> */}
+{/*    • goalProgress: {progressMetrics.goalProgress.current}/{progressMetrics.goalProgress.target}<br/> */}
+{/*    • today.completedTasks: {progressMetrics.today.completedTasks}<br/> */}
+{/*    • momentum: "{progressMetrics.momentum.message}" */}
+{/*  </div> */}
+{/* )} */}
+
           </div>
 
 <FilterSettings 
@@ -579,6 +661,21 @@ const tasksForUI = filterTasks(
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ✅ PRO VALUE PREVIEW (appare dopo 3 task completati) */}
+      {showProPrompt && (
+        <ProValuePreview
+          triggerMessage={triggerMessage}
+          ctaLabel="Sblocca PRO e accelera →"
+          ctaUrl="/pro"
+          onClose={dismissProPrompt}
+          benefits={[
+            { icon: "📊", title: "Analytics avanzati", desc: "Scopri quali task portano più follower e engagement" },
+            { icon: "🤖", title: "AI illimitata", desc: "Genera contenuti senza limiti di crediti giornalieri" },
+            { icon: "⚡", title: "Auto-scheduler", desc: "Pianifica 7 giorni di attività in 30 secondi" }
+          ]}
+        />
+      )}
 
     </div>
 

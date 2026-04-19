@@ -36,6 +36,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { REPLACEMENT_POOL } from "@/lib/replacementPool";
 import { useToast } from "@/hooks/use-toast";
 
+import { calculateValueFeedback } from '@/lib/value-tracker';
+
+import { TaskGuidatoBio } from "./TaskGuidatoBio";
+import { useAIGenerator } from "@/hooks/use-ai-generator";
+import { getTaskMetricEstimate, formatEstimate, getTransparencyNote } from '@/lib/metrics-explainer';
+
 interface TaskCardProps {
   task: Task;
 }
@@ -47,6 +53,7 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiVariables, setAiVariables] = useState<Record<string, string>>({});
   const { updateStatusMutation, generateAiMutation } = useTasks();
+  const { generate, isGenerating } = useAIGenerator();
 
   const isCompleted = task.status === "Done";
   const isSkipped = task.status === "Skipped";
@@ -64,13 +71,30 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
   const { toast } = useToast();
   const handleGenerateAI = async () => {
     try {
-      const result = await generateAiMutation.mutateAsync({
-        taskId: task.task_id,
-        variables: aiVariables,
-      });
+//      const result = await generateAiMutation.mutateAsync({
+//        taskId: task.task_id,
+//        variables: aiVariables,
+//      });
 
-      if (result?.output) setAiModalOpen(false);
+//      if (result?.output) setAiModalOpen(false);
 //      setAiModalOpen(false);
+
+      const variables = {
+          topic: task.title,
+          context: `Piattaforma: ${task.platform}, Obiettivo: ${task.goal}, Livello: ${task.level}`
+       };
+
+      const result = await generate(task.task_id, variables);
+
+      if (result) {
+      // Aggiorna UI con il risultato generato
+        setAiVariables(result); // o come gestisci lo stato locale
+        setAiModalOpen(false);
+    
+      // Se hai uno stato per mostrare l'output, aggiornalo qui:
+      // setGeneratedOutput(result.content);
+      }
+
     } catch (e: any) {
       // Error is handled by query client, but we can customize the message if needed
       // The backend returns { message: "Insufficient credits" }
@@ -78,7 +102,8 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
     }
   };
 
-  const handleComplete = async () => {
+const handleComplete = async () => {
+  try {
     // ✅ Se task è "iniettato" (rimandato o sostitutivo) -> aggiorna Firestore, NON backend
     if (task.__injected) {
       if (!user) return;
@@ -95,11 +120,26 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
         queryKey: ["deferrals", user.id, user.currentDay ?? task.day],
       });
 
+      // ✅ MOSTRA FEEDBACK VALORE anche per task iniettati
+      const feedback = calculateValueFeedback(task, {
+        currentDay: user?.currentDay ?? task.day,
+        completedTasks: 0, // valore minimo, verrà sovrascritto da query reale
+        streak: 0
+      });
+      
+      toast({
+        title: "✅ Task completato!",
+        description: feedback.immediate,
+        duration: 5000,
+        className: "bg-green-50 border-green-200 text-green-900",
+      });
+
       return;
     }
+    
     // ✅ Se KPI: apri modale invece di segnare Done subito
     if (task?.task_type === "KPI" && task?.status !== "Done") {
-      onCompleteClick?.(task); // passa tutto il task
+      onCompleteClick?.(task);
       return;
     }
 
@@ -109,8 +149,31 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
       status: "Done",
       day: task.day,
     });
-  };
 
+    // ✅ MOSTRA FEEDBACK VALORE IMMEDIATO
+    const feedback = calculateValueFeedback(task, {
+      currentDay: user?.currentDay ?? task.day,
+      completedTasks: 0,
+      streak: 0
+    });
+    
+    toast({
+      title: "✅ Task completato!",
+      description: feedback.immediate,
+      duration: 5000,
+      className: "bg-green-50 border-green-200 text-green-900",
+    });
+
+  } catch (error) {
+    console.error("Errore completamento task:", error);
+    toast({
+      title: "⚠️ Qualcosa è andato storto",
+      description: "Riprova tra poco",
+      variant: "destructive",
+      duration: 4000,
+    });
+  }
+};
 
   return (
     <motion.div
@@ -173,6 +236,52 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
             >
               {task.instructions}
             </p>
+
+{/* Dopo la generazione, mostra il risultato */}
+{aiVariables?.content && (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200"
+  >
+    <div className="flex items-start gap-2 mb-2">
+      <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5" />
+      <p className="font-medium text-sm text-slate-900">Contenuto pronto:</p>
+    </div>
+    <p className="text-sm whitespace-pre-wrap text-slate-700 mb-3">
+      {aiVariables.content}
+    </p>
+    {aiVariables.tips && (
+      <p className="text-xs text-slate-500 italic border-t pt-2">
+        💡 {aiVariables.tips}
+      </p>
+    )}
+    <Button
+      size="sm"
+      variant="outline"
+      className="w-full mt-2"
+      onClick={() => navigator.clipboard.writeText(aiVariables.content)}
+    >
+         Copia tutto
+    </Button>
+  </motion.div>
+)}
+
+
+{/* ✅ NUOVO: Task guidato per "Ottimizza bio Instagram" */}
+{expanded && task.task_id === "bio_instagram_001" && (
+  <div className="mt-4 pt-4 border-t">
+    <TaskGuidatoBio 
+      onComplete={() => {
+        handleComplete();
+        setExpanded(false);
+      }}
+      username={user?.username || "tuoprofilo"}
+      niche={user?.onboarding?.niche || "il tuo settore"}
+      isCompleted={isCompleted}  // ← AGGIUNGI QUESTO
+    />
+  </div>
+)}
           </div>
 
           <button
@@ -243,69 +352,86 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
                         Genera con AI
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-md">
                       <DialogHeader>
-                        <DialogTitle>Genera Contenuto</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Bot className="w-5 h-5 text-purple-600" />
+                          Assistente AI
+                        </DialogTitle>
                       </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <p className="text-sm text-muted-foreground">
-                          {/*                       Inserisci i dettagli qui sotto per generare contenuti
-                          su misura.*/}
-                          Ecco i dettagli per la generazione tramite AI:
-                        </p>
-                        {/* Dynamic fields based on generic placeholder for now since schema doesn't define exact vars */}
-                        <div className="space-y-2">
-                          {/*                       <Label>Argomento / Contesto</Label>
-                          <Input
-                            placeholder="Di cosa tratta questo post?"
-                            onChange={(e) =>
-                              setAiVariables({
-                                ...aiVariables,
-                                topic: e.target.value,
-                              })
-                            }
-                          />*/}
-                          <Label>Piano Utente: <b>{user.plan}</b> </Label>
-			{ user.plan === "FREE" && ( 
-			  <Label> - Crediti Residui: <b>{user?.creditsBalance}</b> Crediti </Label>
-                        )}
+  
+                      <div className="space-y-5 py-4">
+                        {/* ✅ ANTEPRIMA VALORE */}
+                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Cosa otterrai:</p>
+                          <ul className="space-y-2 text-sm">
+                            <li className="flex items-start gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                              <span>Contenuto pronto da copiare e pubblicare</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                              <span>Spiegazione del <strong>perché funziona</strong> per il tuo obiettivo</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                              <span>Stima del risultato: <strong>+{task.expected_result || "10-20 engagement"}</strong></span>
+                            </li>
+                          </ul>
                         </div>
-                        <div className="space-y-2">
-                          {/*                          <Label>Tono</Label>
-                          <Input
-                            placeholder="Professionale, divertente, urgente..."
-                            onChange={(e) =>
-                              setAiVariables({
-                                ...aiVariables,
-                                tone: e.target.value,
-                              })
-                            }
-                          />*/}
-                          <Label>
-                            Crediti necessari per questa operazione:{" "}
-                          </Label>
-                          <Label> <b>{task.credits_cost}</b> Crediti </Label>
-                        </div>
+
+                        {/* ✅ COSTO & CREDITI RESIDUI */}
+                        {(() => {
+                          const creditsNeeded = Number(task.credits_cost) || 0;
+                          const balance = user?.creditsBalance ?? 0;
+                          const remaining = balance - creditsNeeded;
+
+                          return (
+                            <div className={`p-3 rounded-lg border ${
+                              remaining < 0 ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'
+                            }`}>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-slate-600">Costo operazione</span>
+                                <span className="font-bold text-slate-900">{creditsNeeded} crediti</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-slate-600">Dopo questa operazione</span>
+                                <span className={`font-bold ${remaining < 0 ? 'text-red-600' : 'text-amber-700'}`}>
+                                  {remaining} crediti
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
-                      <DialogFooter>
-			{ user.plan === "FREE" && ( 
-                          <a href="https://buy.stripe.com/fZu9ATb2v43f1Vz4zT7AI03" target="_blank">
-                            <Button className="w-full">
-                              Acquista 100 Crediti!
+
+                      <DialogFooter className="flex-col sm:flex-row gap-2">
+                        {/* Link acquisto crediti (solo se FREE e insufficienti) */}
+                        {(user?.plan === "FREE"  || user?.plan === "TRIAL")  && (Number(user?.creditsBalance ?? 0) < Number(task.credits_cost || 0)) && (
+                          <a href="https://buy.stripe.com/fZu9ATb2v43f1Vz4zT7AI03" target="_blank" rel="noreferrer" className="w-full">
+                            <Button variant="outline" className="w-full border-amber-300 text-amber-700 hover:bg-amber-50">
+                              💎 Acquista 100 Crediti
                             </Button>
                           </a>
                         )}
-                        <br></br>
+
+{/*                        <Button */}
+{/*                          onClick={handleGenerateAI} */}
+{/*                          disabled={generateAiMutation.isPending || (Number(user?.creditsBalance ?? 0)  */}
+{/*< Number(task.credits_cost || 0))} */}
+{/*                          className="w-full bg-purple-600 hover:bg-purple-700 text-white" */}
+{/*                        > */}
+{/*                          {generateAiMutation.isPending ? "Generazione in corso..." : "Genera con AI"} */}
+{/*                        </Button> */}
+
                         <Button
                           onClick={handleGenerateAI}
-//                          disabled={generateAiMutation.isPending}
-                          disabled={generateAiMutation.isPending ||(user.plan === "FREE" && user.creditsBalance < task.credits_cost)}
-                          className="w-full"
+                          disabled={isGenerating || (Number(user?.creditsBalance ?? 0) < Number(task.credits_cost || 0))}
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                         >
-                          {generateAiMutation.isPending
-                            ? "Generazione in corso..."
-                            : "Genera Contenuto"}
+                          {isGenerating ? "Generazione in corso..." : "Genera con AI"}
                         </Button>
+
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -473,16 +599,45 @@ replacementTaskSnapshot: replacement
                 )}
  	   </>
 	)}
-                {isCompleted && (
-                  <Button
-                    variant="outline"
-                    disabled
-                    className="text-green-600 border-green-200 bg-green-50"
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Completato
-                  </Button>
-                )}
+ {isCompleted && (
+   <div className="space-y-3">
+    {/* Bottone stato */}
+    <Button
+      variant="outline"
+      disabled
+      className="text-green-600 border-green-200 bg-green-50"
+    >
+      <CheckCircle2 className="w-4 h-4 mr-2" />
+      Completato
+    </Button>
+    
+    {/* ✅ NUOVO: Box feedback valore */}
+
+ <motion.div 
+    initial={{ opacity: 0, y: 8 }} 
+    animate={{ opacity: 1, y: 0 }}
+    className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200"
+  >
+    <div className="flex items-start gap-2">
+      <TrendingUp className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+      <div className="text-sm">
+        <p className="font-medium text-green-900">
+          {formatEstimate(getTaskMetricEstimate(task.task_type, String(task.platform)))}
+        </p>
+        <details className="mt-1 group">
+          <summary className="text-xs text-green-700 cursor-pointer hover:underline list-none">
+            Come calcoliamo questa stima? ▸
+          </summary>
+          <p className="text-xs text-green-600 mt-2 pl-2 border-l-2 border-green-300">
+            {getTransparencyNote(getTaskMetricEstimate(task.task_type, String(task.platform)))}
+          </p>
+        </details>
+      </div>
+    </div>
+  </motion.div>
+  </div>
+)}
+
                 {isSkipped && (
                   <Button
                     variant="outline"

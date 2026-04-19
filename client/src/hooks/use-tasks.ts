@@ -193,11 +193,12 @@ export function useTasks() {
 
 
       if (!res.ok) {
-        const errText = await res.text();
-        console.log("AI error:", res.status, errText);
-        if (res.status === 403) throw new Error(errText || "Insufficient credits");
-        throw new Error(errText || "AI generation failed");
-      }
+//        const errText = await res.text();
+//        console.log("AI error:", res.status, errText);
+
+//        if (res.status === 403) throw new Error(errText || "Insufficient credits");
+//        throw new Error(errText || "AI generation failed");
+//      }
 
 //      if (!res.ok) {
 //        if (res.status === 403)
@@ -205,6 +206,19 @@ export function useTasks() {
 //        throw new Error(await res.text());
 //        throw new Error("AI generation failed");
 //      }
+
+        const err = await res.json().catch(() => ({ message: 'Errore AI' }));
+        // ✅ FALLBACK: se l'AI fallisce, ritorna task manuale di riserva
+        if (res.status >= 500 || err.message.includes('unavailable')) {
+          return {
+            output: JSON.stringify({
+              content: `Ecco un template pronto: scrivi 3 frasi sulla tua esperienza con ${variables.topic || 'il tuo         prodotto'}. Usa un tono diretto e chiudi con una domanda per stimolare i commenti.`,
+              tips: 'Pubblica tra le 18:00 e le 20:00 per massimo reach.'
+            })
+          };
+        }
+        throw new Error(err.message || 'Generazione fallita');
+      }
 
       return api.ai.generate.responses[200].parse(await res.json());
     },

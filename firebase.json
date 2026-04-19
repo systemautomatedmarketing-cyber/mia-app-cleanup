@@ -11,18 +11,18 @@
         "*.local"
       ],
       "source": "functions"
-    },
-    {
-      "source": "func",
-      "codebase": "social-growth-engine",
-      "disallowLegacyRuntimeConfig": true,
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ]
+//    },
+//    {
+//      "source": "functions",
+//      "codebase": "social-growth-engine",
+//      "disallowLegacyRuntimeConfig": true,
+//      "ignore": [
+//        "node_modules",
+//        ".git",
+//        "firebase-debug.log",
+//        "firebase-debug.*.log",
+//        "*.local"
+//      ]
     }
   ],
   "firestore": {

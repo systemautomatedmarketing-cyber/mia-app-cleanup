@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.api = exports.sendDailyNotifications = void 0;
+exports.api = exports.generateTaskAI = exports.sendDailyNotifications = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const v2_1 = require("firebase-functions/v2");
 //import * as functions from 'firebase-functions';
@@ -44,6 +44,7 @@ const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const sheets_1 = require("./api/sheets");
+const https_2 = require("firebase-functions/v2/https");
 const TRIAL_DAYS = 40;
 const TRIAL_MS = TRIAL_DAYS * 24 * 60 * 60 * 1000;
 // Imposta opzioni globali per tutte le funzioni v2
@@ -58,6 +59,20 @@ if (!admin.apps.length) {
 var dailyNotification_1 = require("./notifications/dailyNotification");
 Object.defineProperty(exports, "sendDailyNotifications", { enumerable: true, get: function () { return dailyNotification_1.sendDailyNotifications; } });
 //export { testAdminFirestore } from './test-admin';
+//export { generateTaskAI } from './api/ai';
+// ✅ Nota: onCall di v2 richiede esplicitamente region e altre opzioni
+exports.generateTaskAI = (0, https_2.onCall)({ region: 'europe-west1', memory: '256MiB' }, async (request) => {
+    // Log per debug
+    console.log("🤖 generateTaskAI chiamata da:", request.auth?.uid);
+    // Risposta minimale per test
+    return {
+        success: true,
+        output: JSON.stringify({
+            content: "Task di test generato con successo!",
+            tips: "Questo è un fallback di test."
+        })
+    };
+});
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true }));
 app.use(express_1.default.json({ limit: "2mb" }));
@@ -154,4 +169,4 @@ app.get("/api/tasks/today", async (req, res) => {
         //    res.status(401).json({ error: e.message || "Unauthorized" });
     }
 });
-exports.api = (0, https_1.onRequest)({ region: "us-central1" }, app);
+exports.api = (0, https_1.onRequest)({ region: "europe-west1" }, app);
