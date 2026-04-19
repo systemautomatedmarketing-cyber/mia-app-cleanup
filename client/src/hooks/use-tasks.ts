@@ -32,11 +32,11 @@ async function throwApiErrorIfNotOk(res: Response) {
     if (contentType.includes("application/json")) {
       const j: any = await res.json();
        
-const parsed = api.tasks.today.responses[200].parse(json); // se parse supporta tasks
-return {
-  ...parsed,
-  meta: json.meta || null,
-}; 
+// const parsed = api.tasks.today.responses[200].parse(j); // se parse supporta tasks
+// return {
+//   ...parsed,
+//  meta: json.meta || null,
+// }; 
       // il tuo Worker ritorna { message: "PRO_REQUIRED" }
       message = j?.message || j?.error || JSON.stringify(j);
       code = j?.code || j?.message; // comodo: PRO_REQUIRED finisce qui

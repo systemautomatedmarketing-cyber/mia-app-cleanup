@@ -33,7 +33,7 @@ export const generateTaskAI = onCall(
     // Verifica crediti
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
-    const isFree = userData?.plan === 'FREE';
+    const isFree = userData?.plan === 'FREE' || userData?.plan === 'TRIAL';
     const credits = Number(userData?.creditsBalance || 0);
     
     if (isFree && credits <= 0) {
@@ -56,7 +56,7 @@ export const generateTaskAI = onCall(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
+            contents: [{ parts: [{ text: output }] }],
             generationConfig: {
               temperature: 0.7,
               maxOutputTokens: 500,
@@ -72,8 +72,10 @@ export const generateTaskAI = onCall(
       }
 
       const geminiData = await response.json();
-      const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      
+      const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || output; // '{}';
+
+      return json({ output: aiOutput, creditsDeducted: isPro ? 0 : cost }, 200, origin);
+
       // Parsa JSON (Gemini 2.0 lo restituisce già parsato se usi responseMimeType)
       const parsed = typeof rawOutput === 'string' 
         ? JSON.parse(rawOutput.match(/\{[\s\S]*\}/)?.[0] || '{}') 

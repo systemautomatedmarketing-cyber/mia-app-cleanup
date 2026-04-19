@@ -27,6 +27,7 @@ export interface Env {
 
   FB_CLIENT_EMAIL: string;
   FB_PRIVATE_KEY: string;
+  GEMINI_API_KEY: string;  // ← AGGIUNGI QUESTA RIGA
 }
 
 const ALLOWED_ORIGINS = new Set([
@@ -1043,12 +1044,54 @@ console.log("task: " , task);
 //      }
 
         // 2) Compila il prompt sostituendo {variabile}
-        const output = template.replace(/\{(\w+)\}/g, (_, key) => {
-        const val = variables?.[key];
-        return (val !== undefined && val !== null && String(val).trim() !== "")
-          ? String(val)
-          : `{${key}}`;
+//        const output = template.replace(/\{(\w+)\}/g, (_, key) => {
+//        const val = variables?.[key];
+//        return (val !== undefined && val !== null && String(val).trim() !== "")
+//          ? String(val)
+//          : `{${key}}`;
+//        });
+
+ // 2) Compila il prompt sostituendo {variabile}
+        const compiledPrompt = template.replace(/\{(\w+)\}/g, (_, key) => {
+          const val = variables?.[key];
+          return (val !== undefined && val !== null && String(val).trim() !== "")
+            ? String(val)
+            : `{${key}}`;
         });
+
+        // 2b) Chiama Gemini per generare il contenuto reale
+        let output = compiledPrompt; // fallback: se Gemini fallisce, usa il prompt compilato
+        try {
+          const geminiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: compiledPrompt }] }],
+                generationConfig: {
+                  temperature: 0.7,
+                  maxOutputTokens: 600,
+                },
+              }),
+            }
+          );
+
+          if (geminiRes.ok) {
+            const geminiData = await geminiRes.json() as any;
+            const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (rawText) {
+              // Pulisci eventuali backtick markdown che Gemini aggiunge
+              output = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+            }
+          } else {
+            console.error("Gemini error:", geminiRes.status, await geminiRes.text());
+            // output rimane compiledPrompt come fallback
+          }
+        } catch (geminiErr: any) {
+          console.error("Gemini fetch failed:", geminiErr.message);
+          // output rimane compiledPrompt come fallback
+        }
 
         // 3) (MVP) decurta crediti in base al task
         const cost = Number(task.credits_cost || 0);
@@ -1060,6 +1103,8 @@ console.log("task: " , task);
 //          const oldBalance = userDoc.exists ? fsNumber(userDoc.data, "creditsBalance", 0) : 0;
           const plan = userDoc.exists ? (userDoc.data?.fields?.plan?.stringValue ?? "FREE") : "FREE";
           const isPro = plan === "PRO";
+
+	
 
 //console.log("isPro (generateAI): ", isPro);
 
