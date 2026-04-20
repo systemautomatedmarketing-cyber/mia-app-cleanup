@@ -27,8 +27,7 @@ export interface Env {
 
   FB_CLIENT_EMAIL: string;
   FB_PRIVATE_KEY: string;
-
-  GEMINI_API_KEY: string;
+  GEMINI_API_KEY: string;  // ← AGGIUNGI QUESTA RIGA
 }
 
 const ALLOWED_ORIGINS = new Set([
@@ -570,30 +569,6 @@ function fsBool(doc: any, field: string, fallback = false) {
   return v?.booleanValue ?? fallback;
 }
 
-// Legge i dati onboarding salvati in Firestore come mapValue
-function fsOnboarding(doc: any): Record<string, any> {
-  const raw = doc?.fields?.onboarding?.mapValue?.fields ?? {};
-  const getString = (key: string) => raw[key]?.stringValue ?? "";
-  const getNumber = (key: string) => {
-    const v = raw[key];
-    const n = v?.integerValue ?? v?.doubleValue;
-    return n !== undefined ? Number(n) : 0;
-  };
-  const getArray = (key: string): string[] => {
-    const arr = raw[key]?.arrayValue?.values ?? [];
-    return arr.map((v: any) => v?.stringValue ?? "").filter(Boolean);
-  };
-  return {
-    platform:          getArray("platform"),
-    activityType:      getString("activityType"),
-    productType:       getArray("productType"),
-    goal:              getString("goal"),
-    currentFollowers:  getNumber("currentFollowers"),
-    targetFollowers:   getNumber("targetFollowers"),
-    targetMonths:      getNumber("targetMonths"),
-  };
-}
-
 async function firestorePatchDoc(env: Env, path: string, fields: any, updateMask: string[]) {
   const token = await getServiceAccountAccessToken(
     env.FB_CLIENT_EMAIL,
@@ -677,10 +652,17 @@ function getSheetNameForDay(day: number, plan: string) {
 }
 
 function getSheetNameForTask(taskId: string) {
-  const taskDay = Number(taskId.substr(1, 2).replace("-", ""));
+
+console.log("taskId (func): ", taskId);
+console.log("check: ", taskId.substr(1,2).replace("-",""));
+  const taskDay = Number(taskId.substr(1,2).replace("-",""));
+console.log("taskDay: ", taskDay );
+
   if (taskDay <= 30) return "TASKS_30D";
   if (taskDay <= 60) return "TASKS_PRO_60D";
   if (taskDay <= 90) return "TASKS_PRO_90D";
+
+  // oltre 90: fine percorso
   return null;
 }
 
@@ -848,10 +830,16 @@ if (day >= 2) {
 //  tasks.unshift(kpiTask as any);
 }
 
+//        const isComplete = tasksWithStatus.length > 0 && tasksWithStatus.every((t: any) => t.status === "Done");
         const isComplete = tasksWithStatus.length > 0 && tasksWithStatus.every((t: any) => t.status === "Done" || t.status === "Skipped" || t.status === "Deferred");
 
+// ✅ meta per UI upgrade (serve alla Dashboard)
 
+console.log("day: ", day);
+console.log("isPro: ", isPro);
+//console.log("lockedAfterKpi: ", lockedAfterKpi || "missing");
 
+console.log("meta = ",   day === 31 && !isPro ? { lockedAfterKpi: true, upgradeUrl: "/pro", lockMessage: "Hai sbloccato il giorno 31. Per proseguire dal giorno 32 serve il piano PRO.", } : undefined);
 
 const promos = buildPromosForToday(day, plan);
 
@@ -867,25 +855,50 @@ if (lockedAfterKpi) {
   });
 }
 
-const meta =
-  (day === 31 && !isPro)
-    ? {
-        lockedAfterKpi: true,
-        upgradeUrl: "/pro",
-        lockMessage: "Hai sbloccato il giorno 31. Per proseguire dal giorno 32 serve il piano PRO.",
-        promos,
-      }
-    : { promos };
+//const meta =
+//  day === 31 && !isPro
+//    ? {
+//        lockedAfterKpi: true,
+//        upgradeUrl: "/pro",
+//        lockMessage: "Hai sbloccato il giorno 31. Per proseguire dal giorno 32 serve il piano PRO.",
+//      }
+//    : undefined;
+
+const meta = 
+ (day === 31 && !isPro)
+   ? {
+       lockedAfterKpi: true,
+       upgradeUrl: "/pro",
+       lockMessage: "Hai sbloccato il giorno 31. Per proseguire dal giorno 32 serve il piano PRO.",
+       promos,
+     }
+   : {
+       promos,
+     };
+//    : undefined,
+       
+
         return json(
           {
-            day, program: programId, tasks: tasksWithStatus, isComplete, meta,
+            day,                 // number ✅
+//            order: orderId,
+            program: programId,  // string ✅
+            tasks: tasksWithStatus,
+            isComplete,          // boolean ✅
+            meta,
           },
           200,
           origin
         );
 
+console.log("meta: ", meta);
 
+console.log("lockedAfterKpi: ", meta.lockedAfterKpi);
+console.log("upgradeUrl: ", meta.upgradeUrl);
+console.log("lockMessage: ", meta.lockMessage);
 
+//        return json({ tasks: tasksWithStatus }, 200, origin);
+//        return json({ error: "Not found" }, 404, origin);
       }
 
 
@@ -972,85 +985,82 @@ const meta =
         );
       }
 
-      // POST /api/ai/generate — chiama Gemini con contesto utente
+      // POST /api/ai/generate (MVP: restituisce prompt compilato)
       if (request.method === "POST" && url.pathname === "/api/ai/generate") {
         const body = await request.json().catch(() => ({}));
+
+console.log("request.json() :", body);
+
+        const day = Number(body?.day || 1);
+        const programId = String(body?.programId || "TASKS_30D");
+
+console.log("body?.day: ", body?.day);
+console.log("body?.taskId: ", body?.taskId);
+console.log("body?.programId: ", body?.programId);
+console.log("programId: ", programId);
+
 
         const taskId = String(body?.taskId || "").trim();
         const variables = (body?.variables || {}) as Record<string, string>;
 
         if (!taskId) return json({ message: "Missing taskId" }, 400, origin);
 
-        // 1) Trova il task nel Google Sheet
+//        const programId = "TASKS_30D";
+//        const day = 1;
+
+        // Recupera i task dal foglio (usa la tua funzione già esistente)
+//        const tasks = await sheetsGetTasksForDay(env, programId, day); // <-- se il tuo helper ha un altro nome, dimmelo e lo adatto
+//        const task = tasks.find((t: any) => String(t.task_id) === taskId);
+
+        // 1) Leggi tutti i task dal Google Sheet e trova quello richiesto
+//        const all = await readTasksFromSheet(env);
         const tabName = getSheetNameForTask(taskId);
+console.log("tabName: ", tabName);
+
+//        const all = await readTasksFromSheet(env, programId);
         const all = await readTasksFromSheet(env, tabName);
         const task = all.find((t: any) => String(t.task_id).trim() === taskId);
+
+console.log("programId: " , programId);
+console.log("task: " , task);
 
         if (!task) return json({ message: "Task not found" }, 404, origin);
 
         const template = String(task.ai_prompt_template || "").trim();
         if (!template) return json({ message: "No AI template for this task" }, 400, origin);
 
-        // 2) Leggi dati utente: piano, crediti, onboarding
-        const userPath = `users/${uid}`;
-        const userDoc = await firestoreGetDoc(env, userPath);
-        const plan = userDoc.exists ? (userDoc.data?.fields?.plan?.stringValue ?? "FREE") : "FREE";
-        const isPro = plan === "PRO";
-        const cost = Number(task.credits_cost || 0);
+//        // Sostituzione {variabile}
+//        const compiled = template.replace(/\{(\w+)\}/g, (_, key) => variables?.[key] ?? `{${key}}`);
 
-        // Blocca subito se crediti insufficienti (evita chiamata Gemini inutile)
-        if (!isPro && cost > 0) {
-          const oldBalance = userDoc.exists ? fsNumber(userDoc.data, "creditsBalance", 0) : 0;
-          if (oldBalance < cost) {
-            return json({ message: "Insufficient credits" }, 403, origin);
-          }
-        }
+//        return json(
+//          {
+//            success: true,
+//            output: compiled,
+//            taskId,
+//          },
+//          200,
+//          origin
+//        );
+//      }
 
-        // 3) Leggi dati onboarding e costruisci il contesto utente
-        const onb = fsOnboarding(userDoc.data);
-        const platforms = onb.platform.length > 0 ? onb.platform.join(", ") : "social media";
-        const goal = onb.goal || variables.goal || "crescita";
-        const activityType = onb.activityType || "professionista";
-        const productType = onb.productType.length > 0 ? onb.productType.join(", ") : "";
-        const currentFollowers = onb.currentFollowers ?? 0;
-        const targetFollowers = onb.targetFollowers ?? 0;
-        const targetMonths = onb.targetMonths ?? 3;
-        const followersToGain = Math.max(0, targetFollowers - currentFollowers);
-        const perMonth = targetMonths > 0 ? Math.ceil(followersToGain / targetMonths) : 0;
+        // 2) Compila il prompt sostituendo {variabile}
+//        const output = template.replace(/\{(\w+)\}/g, (_, key) => {
+//        const val = variables?.[key];
+//        return (val !== undefined && val !== null && String(val).trim() !== "")
+//          ? String(val)
+//          : `{${key}}`;
+//        });
 
-        // Contesto utente da iniettare nel prompt
-        const userContext = [
-          `Tipo di attività: ${activityType}`,
-          `Piattaforme: ${platforms}`,
-          `Obiettivo: ${goal}`,
-          productType ? `Cosa promuove: ${productType}` : "",
-          currentFollowers > 0 ? `Follower attuali: ${currentFollowers.toLocaleString("it-IT")}` : "Sta partendo da zero",
-          targetFollowers > 0 ? `Obiettivo follower: ${targetFollowers.toLocaleString("it-IT")} in ${targetMonths} mesi (~${perMonth.toLocaleString("it-IT")}/mese)` : "",
-        ].filter(Boolean).join("\n");
-
-        // 4) Compila il template sostituendo {variabile} con i valori inviati dal frontend
-        //    Le variabili mancanti vengono integrate dal contesto onboarding
-        const enrichedVariables: Record<string, string> = {
-          platform: platforms,
-          goal,
-          activityType,
-          productType,
-          currentFollowers: String(currentFollowers),
-          targetFollowers: String(targetFollowers),
-          targetMonths: String(targetMonths),
-          userContext,
-          ...variables, // le variabili del frontend sovrascrivono i default
-        };
-
+ // 2) Compila il prompt sostituendo {variabile}
         const compiledPrompt = template.replace(/\{(\w+)\}/g, (_, key) => {
-          const val = enrichedVariables[key];
+          const val = variables?.[key];
           return (val !== undefined && val !== null && String(val).trim() !== "")
             ? String(val)
             : `{${key}}`;
         });
 
-        // 5) Chiama Gemini
-        let output = compiledPrompt; // fallback se Gemini non risponde
+        // 2b) Chiama Gemini per generare il contenuto reale
+        let output = compiledPrompt; // fallback: se Gemini fallisce, usa il prompt compilato
         try {
           const geminiRes = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GEMINI_API_KEY}`,
@@ -1071,20 +1081,42 @@ const meta =
             const geminiData = await geminiRes.json() as any;
             const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (rawText) {
-              // Rimuove eventuali backtick markdown che Gemini aggiunge
-              output = rawText.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+              // Pulisci eventuali backtick markdown che Gemini aggiunge
+              output = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
             }
           } else {
             console.error("Gemini error:", geminiRes.status, await geminiRes.text());
+            // output rimane compiledPrompt come fallback
           }
         } catch (geminiErr: any) {
           console.error("Gemini fetch failed:", geminiErr.message);
+          // output rimane compiledPrompt come fallback
         }
 
-        // 6) Scala i crediti (solo se non PRO e costo > 0)
-        if (!isPro && cost > 0) {
+        // 3) (MVP) decurta crediti in base al task
+        const cost = Number(task.credits_cost || 0);
+
+        // Se cost 0, non decurtare
+//        if (cost > 0) {
+          const userPath = `users/${uid}`;
+          const userDoc = await firestoreGetDoc(env, userPath);
+//          const oldBalance = userDoc.exists ? fsNumber(userDoc.data, "creditsBalance", 0) : 0;
+          const plan = userDoc.exists ? (userDoc.data?.fields?.plan?.stringValue ?? "FREE") : "FREE";
+          const isPro = plan === "PRO";
+
+	
+
+//console.log("isPro (generateAI): ", isPro);
+
+        if (!isPro && cost >0) {
           const oldBalance = userDoc.exists ? fsNumber(userDoc.data, "creditsBalance", 0) : 0;
+
+          if (oldBalance < cost) {
+            return json({ message: "Insufficient credits" }, 403, origin);
+          }
+
           const newBalance = oldBalance - cost;
+
           await firestorePatchDoc(
             env,
             userPath,
@@ -1094,19 +1126,20 @@ const meta =
             },
             ["creditsBalance", "updatedAt"]
           );
-        }
-
-        // 7) Risposta
-        return json(
-          {
-            output,
-            creditsDeducted: isPro ? 0 : cost,
-            isPro,
-          },
-          200,
-          origin
-        );
       }
+
+  // 4) Risposta per il frontend
+  return json(
+    {
+      output,
+//      creditsDeducted: cost,
+      creditsDeducted: isPro ? 0 : cost,
+      isPro, // opzionale ma utile
+    },
+    200,
+    origin
+  );
+}
 
 if (request.method === "POST" && url.pathname === "/api/tasks/complete-day") {
   const userPath = `users/${uid}`;

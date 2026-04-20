@@ -223,15 +223,28 @@ useEffect(() => {
  // 🔍 DEBUG: stampa cosa stiamo passando
     console.log("🔍 [ProgressDebug] todayQuery.data?.tasks:", todayQuery.data?.tasks);
     console.log("🔍 [ProgressDebug] user?.onboarding:", user?.onboarding);
-    
-    const completedIds = (todayQuery.data?.tasks || [])
+
+//    const completedIds = (todayQuery.data?.tasks || [])
+//      .filter((t: any) => t.status === "Done")
+//      .map((t: any) => t.task_id);
+
+    const tasks = todayQuery.data?.tasks || [];
+    const completedIds = tasks
       .filter((t: any) => t.status === "Done")
       .map((t: any) => t.task_id);
     
+    
     console.log("🔍 [ProgressDebug] completedIds:", completedIds);
 
+//    const metrics = calculateProgressMetrics(
+//      todayQuery.data?.tasks || [],
+//      user?.onboarding,
+//      completedIds,
+//      user?.currentDay || 1
+//    );
+
     const metrics = calculateProgressMetrics(
-      todayQuery.data?.tasks || [],
+      tasks,
       user?.onboarding,
       completedIds,
       user?.currentDay || 1
@@ -240,7 +253,9 @@ useEffect(() => {
     console.log("🔍 [ProgressDebug] metrics calcolate:", metrics);
 
     return metrics;
-  }, [todayQuery.data?.tasks, user?.onboarding, user?.currentDay]);
+//  }, [todayQuery.data?.tasks, user?.onboarding, user?.currentDay]);
+  }, [todayQuery.data?.tasks?.length, user?.onboarding, user?.currentDay]); // ← length invece di array completo
+
 
   if (isLoading || !user) {
     return (

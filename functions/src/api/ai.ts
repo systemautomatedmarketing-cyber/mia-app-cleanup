@@ -51,12 +51,12 @@ export const generateTaskAI = onCall(
       if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: output }] }],
+            contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               temperature: 0.7,
               maxOutputTokens: 500,
@@ -72,9 +72,11 @@ export const generateTaskAI = onCall(
       }
 
       const geminiData = await response.json();
-      const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || output; // '{}';
+console.log("geminiData: ", geminiData);
 
-      return json({ output: aiOutput, creditsDeducted: isPro ? 0 : cost }, 200, origin);
+      const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+
+//      return json({ output: aiOutput, creditsDeducted: isPro ? 0 : cost }, 200, origin);
 
       // Parsa JSON (Gemini 2.0 lo restituisce già parsato se usi responseMimeType)
       const parsed = typeof rawOutput === 'string' 
@@ -93,7 +95,8 @@ export const generateTaskAI = onCall(
         output: JSON.stringify({
           content: parsed.content || parsed.text || rawOutput,
           tips: parsed.tips || parsed.advice || ''
-        })
+        }),
+        creditsDeducted: isFree ? 1 : 0
       };
 
     } catch (error: any) {

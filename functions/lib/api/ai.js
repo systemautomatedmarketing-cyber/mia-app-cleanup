@@ -64,7 +64,7 @@ exports.generateTaskAI = (0, https_1.onCall)({ memory: "256MiB", timeoutSeconds:
     // Verifica crediti
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
-    const isFree = userData?.plan === 'FREE';
+    const isFree = userData?.plan === 'FREE' || userData?.plan === 'TRIAL';
     const credits = Number(userData?.creditsBalance || 0);
     if (isFree && credits <= 0) {
         throw new https_1.HttpsError('permission-denied', 'Crediti insufficienti');
@@ -75,7 +75,7 @@ exports.generateTaskAI = (0, https_1.onCall)({ memory: "256MiB", timeoutSeconds:
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey)
             throw new Error('GEMINI_API_KEY not configured');
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -93,6 +93,7 @@ exports.generateTaskAI = (0, https_1.onCall)({ memory: "256MiB", timeoutSeconds:
         }
         const geminiData = await response.json();
         const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        //      return json({ output: aiOutput, creditsDeducted: isPro ? 0 : cost }, 200, origin);
         // Parsa JSON (Gemini 2.0 lo restituisce già parsato se usi responseMimeType)
         const parsed = typeof rawOutput === 'string'
             ? JSON.parse(rawOutput.match(/\{[\s\S]*\}/)?.[0] || '{}')
@@ -108,7 +109,8 @@ exports.generateTaskAI = (0, https_1.onCall)({ memory: "256MiB", timeoutSeconds:
             output: JSON.stringify({
                 content: parsed.content || parsed.text || rawOutput,
                 tips: parsed.tips || parsed.advice || ''
-            })
+            }),
+            creditsDeducted: isFree ? 1 : 0
         };
     }
     catch (error) {

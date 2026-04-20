@@ -55,6 +55,8 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
   const { updateStatusMutation, generateAiMutation } = useTasks();
   const { generate, isGenerating } = useAIGenerator();
 
+const [generatedOutput, setGeneratedOutput] = useState<{content: string, tips: string} | null>(null);
+
   const isCompleted = task.status === "Done";
   const isSkipped = task.status === "Skipped";
   const isPending = task.status === "Pending" || !task.status;
@@ -88,7 +90,8 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
 
       if (result) {
       // Aggiorna UI con il risultato generato
-        setAiVariables(result); // o come gestisci lo stato locale
+                   setGeneratedOutput(result); // ← Salva output separato
+//        setAiVariables(result); // o come gestisci lo stato locale
         setAiModalOpen(false);
     
       // Se hai uno stato per mostrare l'output, aggiornalo qui:
@@ -238,7 +241,10 @@ const handleComplete = async () => {
             </p>
 
 {/* Dopo la generazione, mostra il risultato */}
-{aiVariables?.content && (
+
+{/* aiVariables?.content && ( */}
+{generatedOutput?.content && (
+
   <motion.div
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
@@ -249,11 +255,13 @@ const handleComplete = async () => {
       <p className="font-medium text-sm text-slate-900">Contenuto pronto:</p>
     </div>
     <p className="text-sm whitespace-pre-wrap text-slate-700 mb-3">
-      {aiVariables.content}
+      {/* aiVariables.content */}
+      {generatedOutput.content}
     </p>
     {aiVariables.tips && (
       <p className="text-xs text-slate-500 italic border-t pt-2">
-        💡 {aiVariables.tips}
+{/* aiVariables.tips */}
+        💡 {generatedOutput.tips}
       </p>
     )}
     <Button

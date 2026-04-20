@@ -23,15 +23,11 @@ export const users = pgTable("users", {
   currentProgram: text("current_program").default("TASKS_30D").notNull(), // TASKS_30D, TASKS_PRO_60
   currentDay: integer("current_day").default(1).notNull(),
   onboarding: jsonb("onboarding").$type<{
-    platform?: string[];       // Es. ["Instagram", "TikTok"]
-    activityType?: string;     // Es. "Freelance", "Influencer / Creator"
-    productType?: string[];    // Es. ["Coaching/Servizio", "Prodotto Digitale"]
-    goal?: string;             // Es. "Generare Lead"
-    currentFollowers?: number; // Follower attuali
-    targetFollowers?: number;  // Obiettivo follower
-    targetMonths?: number;     // Timeframe in mesi
-    // Campi legacy mantenuti per compatibilità Worker
-    level?: string;
+    platform?: string[]; // IG, FB
+    productType?: string[]; // DIGITAL, PHYSICAL, SERVICE
+    goal?: string[]; // DM, LINK, SALES, BRAND
+    timeMode?: number; // 15, 30, 60
+    level?: string; // BEGINNER, INTERMEDIATE
     target?: string;
     tone?: string;
   }>(),

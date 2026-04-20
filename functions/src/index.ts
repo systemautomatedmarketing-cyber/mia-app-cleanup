@@ -24,25 +24,25 @@ if (!admin.apps.length) {
 export { sendDailyNotifications } from './notifications/dailyNotification';
 //export { testAdminFirestore } from './test-admin';
 
-//export { generateTaskAI } from './api/ai';
+export { generateTaskAI } from './api/ai';
 
 // ✅ Nota: onCall di v2 richiede esplicitamente region e altre opzioni
-export const generateTaskAI = onCall(
-  { region: 'europe-west1', cors: true, memory: '256MiB' },
-  async (request) => {
+//export const generateTaskAI = onCall(
+//  { region: 'europe-west1', cors: true, memory: '256MiB' },
+//  async (request) => {
     // Log per debug
-    console.log("🤖 generateTaskAI chiamata da:", request.auth?.uid);
+//    console.log("🤖 generateTaskAI chiamata da:", request.auth?.uid);
     
     // Risposta minimale per test
-    return { 
-      success: true, 
-      output: JSON.stringify({ 
-        content: "Task di test generato con successo!", 
-        tips: "Questo è un fallback di test." 
-      }) 
-    };
-  }
-);
+//    return { 
+//      success: true, 
+//      output: JSON.stringify({ 
+//        content: "Task di test generato con successo!", 
+//        tips: "Questo è un fallback di test." 
+//      }) 
+//    };
+//  }
+//);
 
 const app = express();
 app.use(cors({ origin: true }));
