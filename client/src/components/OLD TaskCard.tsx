@@ -39,6 +39,7 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateValueFeedback } from '@/lib/value-tracker';
 
 import { TaskGuidatoBio } from "./TaskGuidatoBio";
+import { useAIGenerator } from "@/hooks/use-ai-generator";
 import { getTaskMetricEstimate, formatEstimate, getTransparencyNote } from '@/lib/metrics-explainer';
 
 interface TaskCardProps {
@@ -50,9 +51,11 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiVariables, setAiVariables] = useState<Record<string, string>>({});
   const { updateStatusMutation, generateAiMutation } = useTasks();
+  const { generate, isGenerating } = useAIGenerator();
 
-  const [generatedOutput, setGeneratedOutput] = useState<{content: string, tips: string} | null>(null);
+const [generatedOutput, setGeneratedOutput] = useState<{content: string, tips: string} | null>(null);
 
   const isCompleted = task.status === "Done";
   const isSkipped = task.status === "Skipped";
@@ -70,68 +73,35 @@ export function TaskCard({ task, onCompleteClick, }: { task: any; onCompleteClic
   const { toast } = useToast();
   const handleGenerateAI = async () => {
     try {
+//      const result = await generateAiMutation.mutateAsync({
+//        taskId: task.task_id,
+//        variables: aiVariables,
+//      });
+
+//      if (result?.output) setAiModalOpen(false);
+//      setAiModalOpen(false);
+
       const variables = {
-        topic: task.title,
-        context: `Piattaforma: ${task.platform}, Obiettivo: ${task.goal}`,
-      };
+          topic: task.title,
+          context: `Piattaforma: ${task.platform}, Obiettivo: ${task.goal}, Livello: ${task.level}`
+       };
 
-      // Usa il Worker Cloudflare (generateAiMutation) — sistema unico e corretto
-      const result = await generateAiMutation.mutateAsync({
-        taskId: task.task_id,
-        variables,
-      });
+      const result = await generate(task.task_id, variables);
 
-      if (result?.output) {
-        // Il Worker restituisce output come stringa (testo o JSON)
-        let content = result.output;
-        let tips = "";
-
-        // Prova a parsare se è JSON
-        try {
-          const jsonMatch = result.output.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            content = parsed.content || parsed.text || parsed.output || result.output;
-            tips = parsed.tips || parsed.advice || "";
-          }
-        } catch {
-          // Non è JSON — usa il testo direttamente
-          content = result.output;
-        }
-
-        setGeneratedOutput({ content, tips });
+      if (result) {
+      // Aggiorna UI con il risultato generato
+                   setGeneratedOutput(result); // ← Salva output separato
+//        setAiVariables(result); // o come gestisci lo stato locale
         setAiModalOpen(false);
-
-        toast({
-          title: "✅ Contenuto generato!",
-          description: content.substring(0, 80) + (content.length > 80 ? "..." : ""),
-          duration: 5000,
-        });
-
-        // Invalida user per aggiornare il saldo crediti in UI
-        qc.invalidateQueries({ queryKey: [api.auth.user.path] });
+    
+      // Se hai uno stato per mostrare l'output, aggiornalo qui:
+      // setGeneratedOutput(result.content);
       }
+
     } catch (e: any) {
-      const isInsufficientCredits =
-        e?.message?.includes("Insufficient credits") ||
-        e?.status === 403 ||
-        e?.code === 403;
-
-      if (isInsufficientCredits) {
-        toast({
-          title: "Crediti insufficienti",
-          description: "Acquista crediti per usare l'AI su questo task.",
-          variant: "destructive",
-          duration: 5000,
-        });
-      } else {
-        toast({
-          title: "Errore generazione AI",
-          description: e?.message || "Riprova tra qualche secondo.",
-          variant: "destructive",
-          duration: 4000,
-        });
-      }
+      // Error is handled by query client, but we can customize the message if needed
+      // The backend returns { message: "Insufficient credits" }
+      console.error("AI generate failed:", e?.message || e);
     }
   };
 
@@ -270,6 +240,41 @@ const handleComplete = async () => {
               {task.instructions}
             </p>
 
+{/* Dopo la generazione, mostra il risultato */}
+
+{/* aiVariables?.content && ( */}
+{generatedOutput?.content && (
+
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200"
+  >
+    <div className="flex items-start gap-2 mb-2">
+      <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5" />
+      <p className="font-medium text-sm text-slate-900">Contenuto pronto:</p>
+    </div>
+    <p className="text-sm whitespace-pre-wrap text-slate-700 mb-3">
+      {/* aiVariables.content */}
+      {generatedOutput.content}
+    </p>
+    {aiVariables.tips && (
+      <p className="text-xs text-slate-500 italic border-t pt-2">
+{/* aiVariables.tips */}
+        💡 {generatedOutput.tips}
+      </p>
+    )}
+    <Button
+      size="sm"
+      variant="outline"
+      className="w-full mt-2"
+      onClick={() => navigator.clipboard.writeText(aiVariables.content)}
+    >
+         Copia tutto
+    </Button>
+  </motion.div>
+)}
+
 
 {/* ✅ NUOVO: Task guidato per "Ottimizza bio Instagram" */}
 {expanded && task.task_id === "bio_instagram_001" && (
@@ -346,7 +351,7 @@ const handleComplete = async () => {
                   </p>
 
 
-                {!generatedOutput ? (
+                {!generateAiMutation.data?.output ? (
  
                   <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
                     <DialogTrigger asChild>
@@ -418,12 +423,21 @@ const handleComplete = async () => {
                           </a>
                         )}
 
+{/*                        <Button */}
+{/*                          onClick={handleGenerateAI} */}
+{/*                          disabled={generateAiMutation.isPending || (Number(user?.creditsBalance ?? 0)  */}
+{/*< Number(task.credits_cost || 0))} */}
+{/*                          className="w-full bg-purple-600 hover:bg-purple-700 text-white" */}
+{/*                        > */}
+{/*                          {generateAiMutation.isPending ? "Generazione in corso..." : "Genera con AI"} */}
+{/*                        </Button> */}
+
                         <Button
                           onClick={handleGenerateAI}
-                          disabled={generateAiMutation.isPending || (Number(user?.creditsBalance ?? 0) < Number(task.credits_cost || 0))}
+                          disabled={isGenerating || (Number(user?.creditsBalance ?? 0) < Number(task.credits_cost || 0))}
                           className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                         >
-                          {generateAiMutation.isPending ? "Generazione in corso..." : "Genera con AI"}
+                          {isGenerating ? "Generazione in corso..." : "Genera con AI"}
                         </Button>
 
                       </DialogFooter>
@@ -435,20 +449,17 @@ const handleComplete = async () => {
                       animate={{ opacity: 1, y: 0 }}
                       className="mt-4 bg-white p-3 rounded-lg border border-purple-100 shadow-sm"
                     >
-                      <p className="text-sm whitespace-pre-wrap text-slate-700">
-                        {generatedOutput!.content}
+                      <p className="text-sm font-mono whitespace-pre-wrap">
+                        {generateAiMutation.data.output}
                       </p>
-                      {generatedOutput!.tips && (
-                        <p className="text-xs text-slate-500 italic border-t pt-2 mt-2">
-                          💡 {generatedOutput!.tips}
-                        </p>
-                      )}
                       <Button
                         size="sm"
                         variant="outline"
                         className="mt-2 w-full"
                         onClick={() =>
-                          navigator.clipboard.writeText(generatedOutput!.content)
+                          navigator.clipboard.writeText(
+                            generateAiMutation.data.output,
+                          )
                         }
                       >
                         Copia negli Appunti
@@ -458,9 +469,13 @@ const handleComplete = async () => {
                 </div>
               )}
 
+{/* console.log("isPending: ", isPending)*/}
 
               <div className="flex gap-2 justify-end pt-2 border-t border-border">
 
+{/* console.log("task.title: ", task.title) */}
+{/* console.log("task.task_type: ", task?.task_type) */}
+{/* console.log("isLockedKPI: ", isLockedKPI) */}
 
 
                 {isPending && (
@@ -495,6 +510,15 @@ const handleComplete = async () => {
 //                        if (!user) return;
 
                         // Qui (per ora) rimando senza sostituzione
+  console.log("🔄 [DEBUG] Rimanda clicked", {
+    userId: user?.id,
+    userName: user?.email,
+    taskId: task.task_id,
+    taskDay: task.day,
+    currentDay: user?.currentDay,
+    isInjected: task.__injected,
+    deferCount: task.__deferCount,
+  });
 
   if (!user) {
     console.error("❌ [DEBUG] user is undefined");
@@ -514,6 +538,12 @@ const handleComplete = async () => {
         ? REPLACEMENT_POOL.find((x) => x.task_id === selectedReplacementId)
         : undefined;
 
+    console.log("📤 [DEBUG] Chiamata deferTask con:", {
+      uid: user.id,
+      fromDay: user.currentDay ?? task.day, //task.day,
+      taskTitle: task.title,
+      hasReplacement: !!replacement,
+    });
 
                         await deferTask({
                           uid: user.id, 	
@@ -525,7 +555,9 @@ replacementTaskSnapshot: replacement
                         });
 
 
+    console.log("✅ [DEBUG] deferTask completato");
   const targetDay = user.currentDay ?? task.day;
+    console.log("🔄 [DEBUG] Invalidating queries per day:", targetDay);
     
                         // ricarico deferrals + today
 //                          await qc.invalidateQueries({ queryKey: ["deferrals", user.id, user.currentDay ?? task.day] });
@@ -534,6 +566,7 @@ replacementTaskSnapshot: replacement
 
                         await qc.invalidateQueries({ queryKey: [api.tasks.today.path] });
 
+    console.log("✅ [DEBUG] Query invalidate, reset selectedReplacementId");
 
  // reset select dopo l'azione
       setSelectedReplacementId("");
@@ -597,14 +630,14 @@ replacementTaskSnapshot: replacement
       <TrendingUp className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
       <div className="text-sm">
         <p className="font-medium text-green-900">
-          {formatEstimate(getTaskMetricEstimate(task.task_type, String(task.platform), task.title))}
+          {formatEstimate(getTaskMetricEstimate(task.task_type, String(task.platform)))}
         </p>
         <details className="mt-1 group">
           <summary className="text-xs text-green-700 cursor-pointer hover:underline list-none">
             Come calcoliamo questa stima? ▸
           </summary>
           <p className="text-xs text-green-600 mt-2 pl-2 border-l-2 border-green-300">
-            {getTransparencyNote(getTaskMetricEstimate(task.task_type, String(task.platform), task.title))}
+            {getTransparencyNote(getTaskMetricEstimate(task.task_type, String(task.platform)))}
           </p>
         </details>
       </div>

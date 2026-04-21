@@ -136,6 +136,8 @@ export function useTasks() {
         body: JSON.stringify({ status, day }),
       });
 
+      console.log("res.status : ", res.status);
+      console.log("res.day : ", res.day);
 
 //      if (!res.ok) throw new Error(await res.text());
       await throwApiErrorIfNotOk(res);
@@ -187,6 +189,7 @@ export function useTasks() {
 //console.log("secondo");
 //console.log("res: ", res);
 
+      console.log("AI res.status: ", res.status);
 
 
       if (!res.ok) {
@@ -257,8 +260,10 @@ const submitKpiMutation = useMutation({
       }),
     });
 
+console.log("resKpi: ", res);
 //console.log("resJsonKpi: ", res.json());
 
+console.log("payloadKpi : ", payload);
 
 
 //      if (!res.ok) throw new Error("Failed to submit KPI");
@@ -345,6 +350,7 @@ export function useOnboarding() {
 export function useCredits() {
   const queryClient = useQueryClient();
 
+  console.log("queryClient: ", queryClient);
 
   const redeemMutation = useMutation({
     mutationFn: async (code: string) => {
@@ -355,6 +361,7 @@ export function useCredits() {
 //        credentials: "include",
       });
 
+      console.log("res.ok: ", res.ok);
 
       if (!res.ok) {
         if (res.status === 400) throw new Error("Invalid or expired code");

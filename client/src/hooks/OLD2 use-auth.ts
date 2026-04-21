@@ -2,20 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { api } from "@shared/routes";
 
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updateEmail,
-  updatePassword,
-} from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 
-import { doc, getDoc, setDoc, serverTimestamp, Timestamp, updateDoc } from "firebase/firestore";
+import { onAuthStateChanged, sendPasswordResetEmail  } from "firebase/auth";
+//import { doc, getDoc } from "firebase/firestore";
+//import { db } from "@/lib/firebase";
+
+import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const TRIAL_DAYS = 40;
@@ -139,33 +132,37 @@ export function useAuth() {
   });
 
 const updateProfileMutation = useMutation({
-  mutationFn: async ({ firstName, lastName }: { firstName: string; lastName: string }) => {
-    const auth = getAuth();
-    if (!auth.currentUser) throw new Error("Non autenticato");
-    await updateDoc(doc(db, "users", auth.currentUser.uid), { firstName, lastName });
+  mutationFn: async ({ firstName, lastName}: { firstName: string; lastName: string }) => {
+  const auth = getAuth();
+  if (!auth) throw new Error("Non autenticato");
+  await updateDoc(doc(db, "users", auth.uid), { firstName, lastName});
     return true;
   },
-  onSuccess: () => queryClient.invalidateQueries({ queryKey: [api.auth.user.path] }),
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: [api.auth.user.path] }), // o la tua query user
 });
 
 const updateEmailMutation = useMutation({
   mutationFn: async ({ newEmail, currentPassword }: { newEmail: string; currentPassword: string }) => {
-    const u = getAuth().currentUser;
+    const u = auth.currentUser;
     if (!u?.email) throw new Error("Non autenticato");
+
     const cred = EmailAuthProvider.credential(u.email, currentPassword);
     await reauthenticateWithCredential(u, cred);
+
     await updateEmail(u, newEmail.trim().toLowerCase());
     return true;
   },
-  onSuccess: () => queryClient.invalidateQueries({ queryKey: [api.auth.user.path] }),
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] }),
 });
 
 const updatePasswordMutation = useMutation({
   mutationFn: async ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) => {
-    const u = getAuth().currentUser;
+    const u = auth.currentUser;
     if (!u?.email) throw new Error("Non autenticato");
+
     const cred = EmailAuthProvider.credential(u.email, currentPassword);
     await reauthenticateWithCredential(u, cred);
+
     await updatePassword(u, newPassword);
     return true;
   },

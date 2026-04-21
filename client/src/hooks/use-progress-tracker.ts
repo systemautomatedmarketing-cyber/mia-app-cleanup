@@ -1,5 +1,4 @@
 // src/hooks/use-progress-tracker.ts
-// ✅ FUNZIONE PURA: nessun hook React interno, solo calcoli
 import { Task } from "@shared/schema";
 
 export interface ProgressMetrics {
@@ -22,95 +21,120 @@ export interface ProgressMetrics {
   };
 }
 
+// Valori stimati per task_type reali del Google Sheet
+// ACTION = post/azione diretta, LEARNING = studio, KPI = misurazione
+const TASK_VALUES: Record<string, { reach: number; engagement: number; followers: number }> = {
+  'action':   { reach: 35, engagement: 12, followers: 6 },
+  'learning': { reach: 10, engagement:  3, followers: 1 },
+  'kpi':      { reach:  0, engagement:  0, followers: 0 },
+  'default':  { reach: 20, engagement:  6, followers: 3 },
+};
+
+function getTaskValues(taskType: string) {
+  const key = (taskType || '').toLowerCase();
+  return TASK_VALUES[key] ?? TASK_VALUES.default;
+}
+
 export function calculateProgressMetrics(
   tasks: Task[] = [],
-  onboarding?: { goal?: string; targetFollowers?: number },
+  onboarding?: {
+    goal?: string | string[];
+    targetFollowers?: number;
+    currentFollowers?: number;
+    targetMonths?: number;
+  },
   completedTaskIds: string[] = [],
   currentDay: number = 1
 ): ProgressMetrics {
-  
-  // Mappa task type → valore stimato (per Instagram MVP)
-  const TASK_VALUES: Record<string, { reach: number; engagement: number; followers: number }> = {
-    'bio': { reach: 25, engagement: 3, followers: 5 },
-    'story': { reach: 40, engagement: 8, followers: 3 },
-    'comment': { reach: 10, engagement: 12, followers: 2 },
-    'hashtag': { reach: 20, engagement: 5, followers: 4 },
-    'post': { reach: 35, engagement: 15, followers: 8 },
-    'default': { reach: 15, engagement: 4, followers: 2 },
-  };
 
-  // Calcola metriche dai task completati OGGI
-  const todayTasks = tasks.filter(t => 
-    completedTaskIds.includes(t.task_id) && t.day === currentDay
+  // --- Obiettivo follower dall'onboarding ---
+  const targetFollowers = onboarding?.targetFollowers ?? 500;
+  const startingFollowers = onboarding?.currentFollowers ?? 0;
+  const targetMonths = onboarding?.targetMonths ?? 3;
+  const totalToGain = Math.max(0, targetFollowers - startingFollowers);
+
+  const rawGoal = onboarding?.goal;
+  const goalString = typeof rawGoal === 'string'
+    ? rawGoal.toLowerCase()
+    : Array.isArray(rawGoal)
+      ? (rawGoal[0] ?? '').toLowerCase()
+      : '';
+  const label = goalString.includes('follower') ? 'follower' : 'reach';
+
+  // --- Progresso cumulativo basato sui giorni completati ---
+  // Usiamo currentDay - 1 come numero di giorni effettivamente completati
+  // (ogni giorno completato = avanzamento proporzionale verso l'obiettivo)
+  const totalProgramDays = targetMonths * 30; // es. 3 mesi = 90 giorni
+  const daysCompleted = Math.max(0, currentDay - 1);
+  const progressRatio = totalProgramDays > 0
+    ? Math.min(daysCompleted / totalProgramDays, 1)
+    : 0;
+  const estimatedFollowersGained = Math.round(totalToGain * progressRatio);
+
+  // Aggiungi il contributo dei task completati OGGI
+  const completedTodayTasks = tasks.filter(t =>
+    completedTaskIds.includes(t.task_id) &&
+    Number(t.day) === currentDay
   );
-
-  const todayMetrics = todayTasks.reduce((acc, task) => {
-    const values = TASK_VALUES[task.task_type?.toLowerCase()] || TASK_VALUES.default;
-    return {
-      completedTasks: acc.completedTasks + 1,
-      estimatedReach: acc.estimatedReach + values.reach,
-      estimatedEngagement: acc.estimatedEngagement + values.engagement,
-    };
-  }, { completedTasks: 0, estimatedReach: 0, estimatedEngagement: 0 });
-
-  // Calcola progresso verso l'obiettivo principale
-  const target = onboarding?.targetFollowers || 500;
-//  const label = onboarding?.goal?.toLowerCase().includes('follower') ? 'follower' : 'engagement';
-	
-// ✅ FIX: Gestione sicura di goal (può essere string, array, o altro)
-const rawGoal = onboarding?.goal;
-const goalString = typeof rawGoal === 'string' 
-  ? rawGoal.toLowerCase() 
-  : Array.isArray(rawGoal) 
-    ? rawGoal[0]?.toLowerCase() || '' 
-    : '';
-const label = goalString.includes('follower') ? 'follower' : 'engagement';
-  
-  const completedTasks = tasks.filter(t => completedTaskIds.includes(t.task_id));
-  const estimatedFollowers = completedTasks.reduce((sum, task) => {
-    const values = TASK_VALUES[task.task_type?.toLowerCase()] || TASK_VALUES.default;
-    return sum + values.followers;
+  const todayFollowerBonus = completedTodayTasks.reduce((sum, t) => {
+    return sum + getTaskValues(t.task_type ?? '').followers;
   }, 0);
 
+  const currentFollowersGained = estimatedFollowersGained + todayFollowerBonus;
+
   const goalProgress = {
-    current: estimatedFollowers,
-    target,
-    percentage: Math.min(Math.round((estimatedFollowers / target) * 100), 100),
+    current: currentFollowersGained,
+    target: totalToGain,
+    percentage: totalToGain > 0
+      ? Math.min(Math.round((currentFollowersGained / totalToGain) * 100), 100)
+      : 0,
     label,
   };
 
-  // Calcola streak (giorni consecutivi con almeno 1 task completato)
-  const daysWithTasks = new Set(
-    tasks
-      .filter(t => completedTaskIds.includes(t.task_id))
-      .map(t => t.day)
+  // --- Metriche di oggi ---
+  const todayMetrics = completedTodayTasks.reduce(
+    (acc, task) => {
+      const v = getTaskValues(task.task_type ?? '');
+      return {
+        completedTasks: acc.completedTasks + 1,
+        estimatedReach: acc.estimatedReach + v.reach,
+        estimatedEngagement: acc.estimatedEngagement + v.engagement,
+      };
+    },
+    { completedTasks: 0, estimatedReach: 0, estimatedEngagement: 0 }
   );
-  
-  let streak = 0;
-  for (let day = 1; day <= 7; day++) {
-    if (daysWithTasks.has(day)) streak++;
-    else break;
-  }
 
-  // Messaggi di motivazione dinamici
+  // --- Streak: giorni consecutivi completati fino ad oggi ---
+  // Usiamo currentDay come proxy: se l'utente è al giorno N
+  // significa che ha completato N-1 giorni consecutivi
+  const streak = Math.max(0, currentDay - 1);
+
+  // --- Messaggi motivazionali ---
   let momentum: { message: string; nextMilestone: string; encouragement: string };
-  if (streak >= 3) {
+
+  if (streak >= 7) {
     momentum = {
       message: `🔥 ${streak} giorni di fila!`,
-      nextMilestone: "Completa oggi per raggiungere la prima settimana!",
-      encouragement: "La costanza è la chiave della crescita social.",
+      nextMilestone: `Ancora ${totalToGain - currentFollowersGained} ${label} all'obiettivo`,
+      encouragement: 'Sei in modalità crescita automatica. Non fermarti.',
+    };
+  } else if (streak >= 3) {
+    momentum = {
+      message: `✨ ${streak} giorni consecutivi!`,
+      nextMilestone: `Raggiungi 7 giorni per sbloccare lo streak bonus`,
+      encouragement: 'La costanza è la chiave della crescita social.',
     };
   } else if (goalProgress.percentage >= 50) {
     momentum = {
-      message: "🎯 A metà strada!",
-      nextMilestone: `${goalProgress.target - goalProgress.current} ${goalProgress.label} per raggiungere l'obiettivo`,
-      encouragement: "Il grosso è fatto, non mollare ora!",
+      message: '🎯 Sei a metà strada!',
+      nextMilestone: `${totalToGain - currentFollowersGained} ${label} per raggiungere l'obiettivo`,
+      encouragement: 'Il grosso è fatto, non mollare ora!',
     };
   } else {
     momentum = {
-      message: streak > 0 ? "✨ Buon inizio!" : "🚀 Inizia oggi!",
-      nextMilestone: "Completa 3 task per sbloccare il primo insight",
-      encouragement: "Ogni piccolo passo conta.",
+      message: streak > 0 ? '✨ Buon inizio!' : '🚀 Inizia oggi!',
+      nextMilestone: 'Completa i task di oggi per avanzare',
+      encouragement: 'Ogni giorno completato ti avvicina al traguardo.',
     };
   }
 

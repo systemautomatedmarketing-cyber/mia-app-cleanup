@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTasks } from "@/hooks/use-tasks";
 import { Navigation } from "@/components/Navigation";
@@ -25,6 +25,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getDeferrals } from "@/lib/deferrals";
 
@@ -39,6 +40,7 @@ import { DEFAULT_FILTER_SETTINGS } from "@shared/filters";
 
 import { FilterSettings } from "@/components/FilterSettings";
 
+import { useMemo } from "react";
 import { calculateProgressMetrics } from "@/hooks/use-progress-tracker";
 //import { ProgressSummary } from "@/components/ProgressSummary";
 import { HeaderProgress } from "@/components/HeaderProgress";
@@ -139,12 +141,10 @@ useEffect(() => {
   initializeFilters();
 }, [user?.id, user?.filterSettings]);
 
+//  const { todayQuery } = useTasks();
   const { todayQuery, completeDayMutation } = useTasks();
   const [kpiOpen, setKpiOpen] = useState(false);
   const [celebrateOpen, setCelebrateOpen] = useState(false);
-  // Traccia se il KPI dialog è già stato mostrato in questa sessione
-  // (evita che si riapra ad ogni refetch o refresh della pagina)
-  const kpiShownThisSession = useRef(false);
 
   const { data, isLoading } = todayQuery;
 
@@ -159,16 +159,11 @@ useEffect(() => {
   const promos = (data?.meta?.promos ?? []) as any[];
 
   useEffect(() => {
-    // Apre il KPI dialog solo se:
-    // 1. Non è già stato mostrato in questa sessione
-    // 2. Il primo task è di tipo KPI e non è ancora Done
-    if (kpiShownThisSession.current) return;
     const first = data?.tasks?.[0];
     if (first?.task_type === "KPI" && first?.status !== "Done") {
-      kpiShownThisSession.current = true;
       setKpiOpen(true);
     }
-  }, [data?.tasks]);
+  }, [data]);
 
   const err = todayQuery.error as any;
 

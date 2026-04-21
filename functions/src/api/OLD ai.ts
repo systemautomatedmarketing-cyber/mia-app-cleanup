@@ -51,7 +51,7 @@ export const generateTaskAI = onCall(
       if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -59,7 +59,8 @@ export const generateTaskAI = onCall(
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               temperature: 0.7,
-              maxOutputTokens: 600,
+              maxOutputTokens: 500,
+              responseMimeType: "application/json" // Gemini 2.0 supporta JSON nativo!
             }
           })
         }
@@ -71,26 +72,16 @@ export const generateTaskAI = onCall(
       }
 
       const geminiData = await response.json();
-      const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+console.log("geminiData: ", geminiData);
 
-      if (!rawOutput) throw new Error('Gemini returned empty response');
+      const rawOutput = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
 
-      // Pulisce backtick markdown e prova a parsare JSON
-      const cleaned = rawOutput.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
-      let content = cleaned;
-      let tips = '';
+//      return json({ output: aiOutput, creditsDeducted: isPro ? 0 : cost }, 200, origin);
 
-      try {
-        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          content = parsed.content || parsed.text || parsed.output || cleaned;
-          tips = parsed.tips || parsed.advice || parsed.note || '';
-        }
-      } catch {
-        // rawOutput non è JSON valido — usalo direttamente come testo
-        content = cleaned;
-      }
+      // Parsa JSON (Gemini 2.0 lo restituisce già parsato se usi responseMimeType)
+      const parsed = typeof rawOutput === 'string' 
+        ? JSON.parse(rawOutput.match(/\{[\s\S]*\}/)?.[0] || '{}') 
+        : rawOutput;
 
       // Scala credito
       if (isFree) {
@@ -99,9 +90,12 @@ export const generateTaskAI = onCall(
         });
       }
 
-      return {
-        success: true,
-        output: JSON.stringify({ content, tips }),
+      return { 
+        success: true, 
+        output: JSON.stringify({
+          content: parsed.content || parsed.text || rawOutput,
+          tips: parsed.tips || parsed.advice || ''
+        }),
         creditsDeducted: isFree ? 1 : 0
       };
 

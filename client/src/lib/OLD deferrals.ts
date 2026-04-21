@@ -48,6 +48,12 @@ if (typeof fromDay !== "number") throw new Error("deferTask: fromDay non valido"
 if (!task?.task_id) throw new Error("deferTask: task.task_id mancante");
 
  // Debug log (opzionale, rimuovi in produzione)
+  console.log("[deferTask] Input validato:", { 
+    uid, 
+    fromDay, 
+    taskId: task.task_id,
+    hasReplacement: !!replacementTaskSnapshot 
+  });
 
 //  const { uid, fromDay, task, replacementTaskSnapshot } = params;
   const toDay = fromDay + 1;
@@ -82,6 +88,7 @@ if (!task?.task_id) throw new Error("deferTask: task.task_id mancante");
   const wasInCarryOver = carryIndex !== -1;
   if (wasInCarryOver) {
     fromCarry.splice(carryIndex, 1);
+    console.log(`[deferTask] ✅ Rimosso da carryOver giorno ${fromDay}:`, task.task_id);
   }
 
   // ─────────────────────────────────────
@@ -115,6 +122,7 @@ if (!wasInCarryOver) {
         originalTaskId: task.__carryOriginalTaskId || task.task_id,
         taskSnapshot: task,
       });
+console.log(`[deferTask] ✅ Aggiunto a carryOver giorno ${toDay}:`, task.task_id);
     }
 
 //    tx.set(fromRef, { hiddenTaskIds: [...hidden], updatedAt: serverTimestamp() }, { merge: true });
@@ -150,9 +158,11 @@ if (!wasInCarryOver) {
       });
       tx.set(fromRef, { carryOver: todayCarry, updatedAt: serverTimestamp() }, { merge: true });
       
+console.log("[deferTask] Replacement task aggiunto:", replacementTaskSnapshot.title);
 
     }
   });
+ console.log(`[deferTask] 🔄 Transazione completata: ${task.task_id} da giorno ${fromDay} a ${toDay}`);
   // ✅ FINE: Nessun codice extra, la transazione ha già fatto tutto
 }
 
@@ -187,4 +197,5 @@ export async function setInjectedTaskStatus(params: {
 
     tx.set(ref, { carryOver: carry, updatedAt: serverTimestamp() }, { merge: true });
   });
+  console.log("[setInjectedTaskStatus] Status aggiornato:", { carryOriginalTaskId, status });
 }

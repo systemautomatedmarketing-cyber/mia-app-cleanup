@@ -597,14 +597,14 @@ replacementTaskSnapshot: replacement
       <TrendingUp className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
       <div className="text-sm">
         <p className="font-medium text-green-900">
-          {formatEstimate(getTaskMetricEstimate(task.task_type, String(task.platform), task.title))}
+          {formatEstimate(getTaskMetricEstimate(task.task_type, String(task.platform)))}
         </p>
         <details className="mt-1 group">
           <summary className="text-xs text-green-700 cursor-pointer hover:underline list-none">
             Come calcoliamo questa stima? ▸
           </summary>
           <p className="text-xs text-green-600 mt-2 pl-2 border-l-2 border-green-300">
-            {getTransparencyNote(getTaskMetricEstimate(task.task_type, String(task.platform), task.title))}
+            {getTransparencyNote(getTaskMetricEstimate(task.task_type, String(task.platform)))}
           </p>
         </details>
       </div>
