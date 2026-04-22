@@ -29,9 +29,6 @@ export interface Env {
   FB_PRIVATE_KEY: string;
 
   GEMINI_API_KEY: string;
-
-  // Stripe webhook
-  STRIPE_WEBHOOK_SECRET: string;
 }
 
 const ALLOWED_ORIGINS = new Set([
@@ -688,116 +685,27 @@ function getSheetNameForTask(taskId: string) {
 }
 
 
-// ---------- Stripe webhook signature verification (WebCrypto, no dependencies) ----------
-async function verifyStripeSignature(
-  payload: string,
-  sigHeader: string,
-  secret: string
-): Promise<boolean> {
-  try {
-    // Estrae timestamp e firma dall'header Stripe-Signature
-    const parts = Object.fromEntries(sigHeader.split(",").map((p) => p.split("=")));
-    const timestamp = parts["t"];
-    const signature = parts["v1"];
-    if (!timestamp || !signature) return false;
-
-    // Costruisce il payload firmato
-    const signedPayload = `${timestamp}.${payload}`;
-
-    // Importa la chiave HMAC
-    const key = await crypto.subtle.importKey(
-      "raw",
-      new TextEncoder().encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-
-    // Calcola la firma attesa
-    const sigBuffer = await crypto.subtle.sign(
-      "HMAC",
-      key,
-      new TextEncoder().encode(signedPayload)
-    );
-
-    // Converte in hex
-    const expectedSig = Array.from(new Uint8Array(sigBuffer))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-
-    return expectedSig === signature;
-  } catch {
-    return false;
-  }
-}
-
 // ---------- API ----------
 export default {
+//  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const origin = request.headers.get("Origin");
+//    const url = new URL(request.url);
+
+    // ✅ Preflight CORS
+//    if (request.method === "OPTIONS") {
+//      return new Response(null, {
+//        status: 204,
+//        headers: corsHeaders(origin),
+//      });
+//    }
 
     if (request.method === "OPTIONS") {
       return withCors(new Response(null, { status: 204 }), origin);
     }
 
-    // ── STRIPE WEBHOOK ──
-    // Deve essere gestito PRIMA dell'autenticazione Firebase
-    // perché Stripe non manda un Bearer token
-    if (request.method === "POST" && new URL(request.url).pathname === "/api/stripe/webhook") {
-      const sig = request.headers.get("Stripe-Signature") ?? "";
-      const rawBody = await request.text();
-
-      const valid = await verifyStripeSignature(rawBody, sig, env.STRIPE_WEBHOOK_SECRET);
-      if (!valid) {
-        return new Response("Invalid signature", { status: 400 });
-      }
-
-      let event: any;
-      try {
-        event = JSON.parse(rawBody);
-      } catch {
-        return new Response("Invalid JSON", { status: 400 });
-      }
-
-      // Gestiamo solo checkout.session.completed
-      if (event.type === "checkout.session.completed") {
-        const session = event.data?.object;
-        const uid         = session?.metadata?.uid;
-        const productType = session?.metadata?.productType; // "credits_100" | "pro"
-        const credits     = Number(session?.metadata?.credits ?? 0);
-
-        if (!uid) {
-          console.error("Stripe webhook: uid mancante nei metadata");
-          return new Response("Missing uid", { status: 400 });
-        }
-
-        const userPath = `users/${uid}`;
-
-        if (productType === "pro") {
-          // Attiva piano PRO
-          await firestorePatchDoc(env, userPath, {
-            plan:      { stringValue: "PRO" },
-            isActive:  { booleanValue: true },
-            proActivatedAt: { timestampValue: new Date().toISOString() },
-            updatedAt: { timestampValue: new Date().toISOString() },
-          }, ["plan", "isActive", "proActivatedAt", "updatedAt"]);
-
-        } else if (productType === "credits" && credits > 0) {
-          // Accredita i crediti
-          const userDoc = await firestoreGetDoc(env, userPath);
-          const oldBalance = userDoc.exists ? fsNumber(userDoc.data, "creditsBalance", 0) : 0;
-          await firestorePatchDoc(env, userPath, {
-            creditsBalance: { integerValue: String(oldBalance + credits) },
-            updatedAt:      { timestampValue: new Date().toISOString() },
-          }, ["creditsBalance", "updatedAt"]);
-        }
-      }
-
-      // Stripe si aspetta 200 anche per eventi che non gestiamo
-      return new Response("ok", { status: 200 });
-    }
-
     try {
+
       const url = new URL(request.url);
 
 // Auth: token Firebase dal client
@@ -1262,57 +1170,6 @@ if (request.method === "POST" && url.pathname === "/api/kpi") {
   return json({ success: true }, 200, origin);
 }
 
-
-      // POST /api/stripe/checkout — crea una Stripe Checkout Session
-      if (request.method === "POST" && url.pathname === "/api/stripe/checkout") {
-        const body = await request.json().catch(() => ({})) as any;
-        const productType = String(body?.productType || "");
-        const credits     = Number(body?.credits || 0);
-
-        // Scegli il price ID in base al prodotto
-        // I price ID li trovi su dashboard.stripe.com → Products
-        let priceId: string;
-        let quantity = 1;
-
-        if (productType === "pro") {
-          priceId = (env as any).STRIPE_PRICE_PRO;
-        } else if (productType === "credits") {
-          priceId = (env as any).STRIPE_PRICE_CREDITS_100;
-        } else {
-          return json({ message: "Invalid productType" }, 400, origin);
-        }
-
-        // Crea la Checkout Session via Stripe API REST
-        const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${(env as any).STRIPE_SECRET_KEY}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            "payment_method_types[]": "card",
-            "mode": productType === "pro" ? "payment" : "payment",
-            "line_items[0][price]": priceId,
-            "line_items[0][quantity]": String(quantity),
-            // Metadata: il webhook li usa per sapere chi e cosa aggiornare
-            "metadata[uid]": uid,
-            "metadata[productType]": productType,
-            "metadata[credits]": String(credits),
-            // URL di ritorno dopo il pagamento
-            "success_url": `${(env as any).APP_URL}/dashboard?payment=success`,
-            "cancel_url": `${(env as any).APP_URL}/${productType === "pro" ? "pro" : "credits"}?payment=cancelled`,
-          }),
-        });
-
-        if (!stripeRes.ok) {
-          const err = await stripeRes.json() as any;
-          console.error("Stripe checkout error:", err);
-          return json({ message: err?.error?.message || "Stripe error" }, 500, origin);
-        }
-
-        const session = await stripeRes.json() as any;
-        return json({ url: session.url }, 200, origin);
-      }
 
       // fallback
       return text("Not Found", origin, 404);

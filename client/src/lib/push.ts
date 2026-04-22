@@ -54,7 +54,7 @@ try {
     throw new Error("Token notifiche non ottenuto.");
   }
 
-  console.log("✅ Token FCM ottenuto:", token);
+//  console.log("✅ Token FCM ottenuto:", token);
 
 //  await setDoc(
 //    doc(db, "users", user.uid) , "pushTokens", token),

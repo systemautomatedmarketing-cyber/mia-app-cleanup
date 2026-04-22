@@ -1,10 +1,6 @@
-import { useState } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
-import { Check, Loader2 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
-import { authFetch } from "@/lib/api";
+import { Check } from "lucide-react";
 
 const FEATURES = [
   "Generatore di Strategia AI Avanzato",
@@ -16,30 +12,6 @@ const FEATURES = [
 ];
 
 export default function Pro() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-
-  const handleUpgrade = async () => {
-    if (!user?.id) return;
-    setLoading(true);
-    try {
-      const res = await authFetch("/api/stripe/checkout", {
-        method: "POST",
-        body: JSON.stringify({ uid: user.id, productType: "pro" }),
-      });
-      const data = await res.json() as any;
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error(data.message || "Errore checkout");
-      }
-    } catch (e: any) {
-      toast({ title: "Errore checkout", description: e.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Navigation />
@@ -77,18 +49,16 @@ export default function Pro() {
               <span className="text-xl text-slate-500 font-medium">/una tantum</span>
             </div>
             <p className="text-slate-500 mb-8">
-              Accesso completo. Senza abbonamenti.
+              Annulla in qualsiasi momento. Senza domande.
             </p>
-            <Button
-              size="lg"
-              onClick={handleUpgrade}
-              disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-lg h-14 rounded-xl shadow-lg shadow-indigo-200"
-            >
-              {loading
-                ? <><Loader2 className="w-5 h-5 animate-spin mr-2" />Apertura checkout...</>
-                : "Aggiorna a PRO"}
-            </Button>
+            <a href="https://buy.stripe.com/aFa3cvfiL9nzgQt0jD7AI02" target="_blank">
+              <Button
+                size="lg"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-lg h-14 rounded-xl shadow-lg shadow-indigo-200"
+              >
+                Aggiorna Ora
+              </Button>
+            </a>
             <p className="text-xs text-slate-400 mt-4">
               Pagamento sicuro tramite Stripe.
               Garanzia di rimborso di 14 giorni.

@@ -35,7 +35,7 @@ export class NotificationManager {
       });
       
       if (token) {
-        console.log('Token FCM ottenuto:', token);
+//        console.log('Token FCM ottenuto:', token);
         // Salva il token nel backend (vedi sotto)
         await this.saveTokenToBackend(token);
         this.isInitialized = true;
