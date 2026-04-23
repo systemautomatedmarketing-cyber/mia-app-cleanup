@@ -389,31 +389,43 @@ const handleComplete = async () => {
                           const balance = user?.creditsBalance ?? 0;
                           const remaining = balance - creditsNeeded;
 
+const isPRO = user?.plan === "PRO" || false;
+
                           return (
                             <div className={`p-3 rounded-lg border ${
-                              remaining < 0 ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'
+                              isPRO ? 'bg-green-50 border-green-200' : remaining < 0 ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'
                             }`}>
+{isPRO ? (
+                              <div className="flex justify-center text-sm mb-1"> 
+                                <span className="font-bold  text-slate-600">Piano PRO</span>
+                              </div>
+) : (            
                               <div className="flex justify-between text-sm mb-1">
                                 <span className="text-slate-600">Costo operazione</span>
                                 <span className="font-bold text-slate-900">{creditsNeeded} crediti</span>
                               </div>
+)}
+{!isPRO && (
                               <div className="flex justify-between text-sm">
                                 <span className="text-slate-600">Dopo questa operazione</span>
                                 <span className={`font-bold ${remaining < 0 ? 'text-red-600' : 'text-amber-700'}`}>
                                   {remaining} crediti
                                 </span>
                               </div>
+)}
                             </div>
-                          );
+
+)
+  
                         })()}
                       </div>
 
                       <DialogFooter className="flex-col sm:flex-row gap-2">
                         {/* Link acquisto crediti (solo se FREE e insufficienti) */}
                         {(user?.plan === "FREE"  || user?.plan === "TRIAL")  && (Number(user?.creditsBalance ?? 0) < Number(task.credits_cost || 0)) && (
-                          <a href="https://buy.stripe.com/fZu9ATb2v43f1Vz4zT7AI03" target="_blank" rel="noreferrer" className="w-full">
+                          <a href="./credits" target="_blank" rel="noreferrer" className="w-full">
                             <Button variant="outline" className="w-full border-amber-300 text-amber-700 hover:bg-amber-50">
-                              💎 Acquista 100 Crediti
+                              💎 Acquista Crediti
                             </Button>
                           </a>
                         )}

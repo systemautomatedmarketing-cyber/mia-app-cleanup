@@ -40,7 +40,6 @@ import { DEFAULT_FILTER_SETTINGS } from "@shared/filters";
 import { FilterSettings } from "@/components/FilterSettings";
 
 import { calculateProgressMetrics } from "@/hooks/use-progress-tracker";
-import { getMotivationalMessage } from "@/lib/motivational-messages";
 //import { ProgressSummary } from "@/components/ProgressSummary";
 import { HeaderProgress } from "@/components/HeaderProgress";
 
@@ -81,37 +80,43 @@ const [localFilterSettings, setLocalFilterSettings] = useState<UserFilterSetting
     if (!user?.id) return;
 
     const registerNotifications = async () => {
-      // Non chiedere se il browser non supporta
-      if (!("Notification" in window)) return;
-
-      // Se l'utente ha già risposto alla richiesta (granted o denied), non chiedere di nuovo
-      // ma se è "default" (non ancora risposto) chiediamo ad ogni apertura
-      if (Notification.permission === "denied") return;
-
       try {
-        const { areNotificationsEnabled, enablePushNotifications, refreshFcmToken } = await import("@/lib/push");
+      // Controlla se notifiche già abilitate
+        const { areNotificationsEnabled, enablePushNotifications } = await import("@/lib/push");
+      
         const alreadyEnabled = await areNotificationsEnabled(user.id);
-
+      
         if (!alreadyEnabled) {
-          // Chiedi il permesso — se l'utente risponde "nega" non torneremo a chiedere
-          // (il controllo `Notification.permission === "denied"` sopra lo gestisce)
-          await enablePushNotifications(user.id);
+        
+        // Richiedi permesso (non bloccante: se l'utente nega, non mostriamo errori)
+          const success = await enablePushNotifications(user.id);
+        
+          if (success) {
+          // Opzionale: mostra un toast di conferma
+          }
         } else {
-          // Aggiorna token ogni 7 giorni
-          const { getDoc, doc } = await import("firebase/firestore");
-          const { db } = await import("@/lib/firebase");
-          const snap = await getDoc(doc(db, "users", user.id));
-          const lastUpdate = snap.data()?.notificationSettings?.lastTokenUpdate?.toDate?.();
-          const daysSince = lastUpdate
+        
+        // Opzionale: aggiorna token periodicamente (ogni 7 giorni)
+          const { refreshFcmToken } = await import("@/lib/push");
+          const userDoc = await import("firebase/firestore").then(m => 
+            m.getDoc(m.doc(m.db, "users", user.id))
+          );
+          const lastUpdate = userDoc.data()?.notificationSettings?.lastTokenUpdate?.toDate();
+          const daysSinceUpdate = lastUpdate 
             ? (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24)
             : 999;
-          if (daysSince > 7) await refreshFcmToken(user.id);
+          
+          if (daysSinceUpdate > 7) {
+            await refreshFcmToken(user.id);
+          }
         }
-      } catch {
-        // Silenzioso — le notifiche non sono critiche
+      } catch (error) {
+      // Silenzioso: non mostriamo errori all'utente per le notifiche
+        console.warn("⚠️ Registrazione notifiche fallita (non critico):", error);
       }
     };
 
+  // Esegui dopo un piccolo delay per non bloccare il caricamento iniziale
     const timer = setTimeout(registerNotifications, 3000);
   
     return () => clearTimeout(timer);
@@ -459,26 +464,38 @@ const tasksForUI = filterTasks(
         </header>
 
         <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
-          {/* Motivation Banner — dinamico e personalizzato */}
-          {(() => {
-            const { title, message } = getMotivationalMessage(
-              user,
-              completedTasks,
-              totalTasks,
-              progressMetrics
-            );
-            return (
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 md:p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
-                <div className="relative z-10">
-                  <h2 className="text-2xl md:text-3xl font-display font-bold mb-2">{title}</h2>
-                  <p className="text-indigo-100 max-w-xl">{message}</p>
-                </div>
-                <Trophy className="absolute right-4 bottom-[-20px] w-40 h-40 text-white opacity-10 rotate-12" />
-              </div>
-            );
-          })()}
-{/*
- <FilterSettings 
+          {/* Motivation Banner */}
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 md:p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
+            <div className="relative z-10">
+              <h2 className="text-2xl md:text-3xl font-display font-bold mb-2">
+                Mantieni il ritmo!
+              </h2>
+              <p className="text-indigo-100 max-w-xl">
+                Hai completato {completedTasks} su {totalTasks} attività oggi.
+                La costanza è la chiave della crescita.
+              </p>
+            </div>
+            <Trophy className="absolute right-4 bottom-[-20px] w-40 h-40 text-white opacity-10 rotate-12" />
+
+{/* ✅ Summary progresso in alto */}
+{/* <ProgressSummary */}
+{/*  metrics={progressMetrics} */}
+{/*  className="mb-6" */}
+{/* /> */}
+
+{/* 🔍 DEBUG: Se ProgressSummary non si vede, questo appare */}
+{/* {process.env.NODE_ENV === 'development' && ( */}
+{/*  <div className="p-3 bg-amber-100 border border-amber-300 rounded text-xs text-amber-900 mb-6"> */}
+{/*    <strong>Debug Info:</strong><br/> */}
+{/*    • goalProgress: {progressMetrics.goalProgress.current}/{progressMetrics.goalProgress.target}<br/> */}
+{/*    • today.completedTasks: {progressMetrics.today.completedTasks}<br/> */}
+{/*    • momentum: "{progressMetrics.momentum.message}" */}
+{/*  </div> */}
+{/* )} */}
+
+          </div>
+
+<FilterSettings 
   onFiltersChanged={(newSettings) => {
     // ✅ Aggiorna manualmente l'oggetto user con i nuovi filterSettings
     // (questo forza il ricalcolo di filterTasks al prossimo render)
@@ -490,7 +507,7 @@ const tasksForUI = filterTasks(
     // Refetch dei task per applicare i nuovi filtri
     todayQuery.refetch();
   }} 
- />
+/>
           {promos.filter(p => p.placement === "TOP").map((p) => (
             <div key={p.id} className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 md:p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
               <div className="relative z-10">
@@ -507,7 +524,7 @@ const tasksForUI = filterTasks(
             </div>
 
           ))}
-*/}
+
           {/* Task List */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">

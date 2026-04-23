@@ -32,12 +32,6 @@ export interface Env {
 
   // Stripe webhook
   STRIPE_WEBHOOK_SECRET: string;
-  STRIPE_SECRET_KEY: string;
-  STRIPE_PRICE_PRO: string;
-  STRIPE_PRICE_CREDITS_100: string;
-  STRIPE_PRICE_CREDITS_200: string;
-  STRIPE_PRICE_CREDITS_500: string;
-  APP_URL: string;
 }
 
 const ALLOWED_ORIGINS = new Set([
@@ -788,8 +782,8 @@ export default {
             updatedAt: { timestampValue: new Date().toISOString() },
           }, ["plan", "isActive", "proActivatedAt", "updatedAt"]);
 
-        } else if (productType.startsWith("credits") && credits > 0) {
-          // Accredita i crediti (supporta credits_100, credits_200, credits_500)
+        } else if (productType === "credits" && credits > 0) {
+          // Accredita i crediti
           const userDoc = await firestoreGetDoc(env, userPath);
           const oldBalance = userDoc.exists ? fsNumber(userDoc.data, "creditsBalance", 0) : 0;
           await firestorePatchDoc(env, userPath, {
@@ -1275,38 +1269,38 @@ if (request.method === "POST" && url.pathname === "/api/kpi") {
         const productType = String(body?.productType || "");
         const credits     = Number(body?.credits || 0);
 
-        // Mappa productType → Price ID corrispondente
-        const PRICE_MAP: Record<string, string> = {
-          "pro":          env.STRIPE_PRICE_PRO,
-          "credits_100":  env.STRIPE_PRICE_CREDITS_100,
-          "credits_200":  env.STRIPE_PRICE_CREDITS_200,
-          "credits_500":  env.STRIPE_PRICE_CREDITS_500,
-        };
+        // Scegli il price ID in base al prodotto
+        // I price ID li trovi su dashboard.stripe.com → Products
+        let priceId: string;
+        let quantity = 1;
 
-        const priceId = PRICE_MAP[productType];
-        if (!priceId) {
-          return json({ message: `Invalid productType: ${productType}` }, 400, origin);
+        if (productType === "pro") {
+          priceId = (env as any).STRIPE_PRICE_PRO;
+        } else if (productType === "credits") {
+          priceId = (env as any).STRIPE_PRICE_CREDITS_100;
+        } else {
+          return json({ message: "Invalid productType" }, 400, origin);
         }
-
-        const isCredits = productType.startsWith("credits");
 
         // Crea la Checkout Session via Stripe API REST
         const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${env.STRIPE_SECRET_KEY}`,
+            "Authorization": `Bearer ${(env as any).STRIPE_SECRET_KEY}`,
             "Content-Type": "application/x-www-form-urlencoded",
           },
           body: new URLSearchParams({
             "payment_method_types[]": "card",
-            "mode": "payment",
+            "mode": productType === "pro" ? "payment" : "payment",
             "line_items[0][price]": priceId,
-            "line_items[0][quantity]": "1",
+            "line_items[0][quantity]": String(quantity),
+            // Metadata: il webhook li usa per sapere chi e cosa aggiornare
             "metadata[uid]": uid,
             "metadata[productType]": productType,
             "metadata[credits]": String(credits),
-            "success_url": `${env.APP_URL}/dashboard?payment=success`,
-            "cancel_url": `${env.APP_URL}/${isCredits ? "credits" : "pro"}?payment=cancelled`,
+            // URL di ritorno dopo il pagamento
+            "success_url": `${(env as any).APP_URL}/dashboard?payment=success`,
+            "cancel_url": `${(env as any).APP_URL}/${productType === "pro" ? "pro" : "credits"}?payment=cancelled`,
           }),
         });
 
