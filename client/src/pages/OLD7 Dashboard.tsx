@@ -323,7 +323,7 @@ const tasksForUI = filterTasks(
     <div className="flex min-h-screen bg-slate-50">
       <Navigation />
 
-      <main className="flex-1 md:ml-0 pb-24 md:pb-8 landscape:pb-4 overflow-x-hidden min-w-0">
+      <main className="flex-1 md:ml-0 pb-24 md:pb-8 overflow-x-hidden min-w-0">
         <header className="sticky top-0 z-40 bg-slate-60/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex justify-between items-center">
           <div> 
 {/*            <h2 className="text-2xl font-display font-bold text-slate-900"> */}

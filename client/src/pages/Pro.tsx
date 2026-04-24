@@ -117,7 +117,7 @@ export default function Pro() {
           <div className="space-y-3">
             {[
               { q: "Cosa succede dopo il pagamento?", a: "Il tuo piano viene attivato immediatamente. I task del percorso avanzato diventano subito disponibili." },
-              { q: "Posso chiedere il rimborso?", a: "Sì, entro 14 giorni dal pagamento senza domande. Scrivi a supporto@webstudioams.it." },
+              { q: "Posso chiedere il rimborso?", a: "Sì, entro 14 giorni dal pagamento senza domande. Scrivi a info@webstudioams.it." },
               { q: "Il prezzo include aggiornamenti futuri?", a: "Sì. Tutte le funzionalità future del piano PRO sono incluse senza costi aggiuntivi." },
             ].map(({ q, a }) => (
               <div key={q} className="bg-white rounded-2xl border border-slate-200 px-5 py-4">

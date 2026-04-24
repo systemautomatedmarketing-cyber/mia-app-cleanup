@@ -471,90 +471,122 @@ const isPRO = user?.plan === "PRO" || false;
               )}
 
 
-              {/* ── Azioni task ── */}
-              <div className="pt-2 border-t border-border">
+              <div className="flex gap-2 justify-end pt-2 border-t border-border">
+
+
 
                 {isPending && (
                   <>
-                    {isLockedKPI ? (
-                      <Button
-                        onClick={handleComplete}
-                        disabled={updateStatusMutation.isPending}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Completa KPI Obbligatorio
-                      </Button>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        {/* Select sostituzione — piena larghezza */}
-                        <select
-                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white hover:border-indigo-300 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                          value={selectedReplacementId}
-                          onChange={(e) => setSelectedReplacementId(e.target.value)}
-                        >
-                          <option value="">Sostituisci con… (opzionale)</option>
-                          {REPLACEMENT_POOL.map((r) => (
-                            <option key={r.task_id} value={r.task_id}>
-                              {r.title}
-                            </option>
-                          ))}
-                        </select>
+  {isLockedKPI ? (
+                    <Button
+                      onClick={handleComplete}
+                      disabled={updateStatusMutation.isPending}
+		      className="bg-emerald-600 hover:bg-emerald-700 text-white animate- pulse" 
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Completa KPI Obbligatorio
+                    </Button>
+  ) : (
+	<>
+	    <select
+              className="border rounded px-2 py-1 text-sm bg-white hover:border-indigo-300 transition-colors"
+	      value={selectedReplacementId}
+	      onChange={(e) => setSelectedReplacementId(e.target.value)}
+	    >
+	      <option value="">Sostituisci con… (opzionale)</option>
+	      {REPLACEMENT_POOL.map((r) => (
+	        <option key={r.task_id} value={r.task_id}>
+	          {r.title}
+ 	        </option>
+	      ))}
+	    </select>
+                    <Button
+                      variant="ghost"
+                      onClick={async () => {
 
-                        {/* Rimanda + Segna completato */}
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <Button
-                            variant="ghost"
-                            onClick={async () => {
-                              if (!user?.id || task.day === undefined) return;
-                              try {
-                                const replacement = selectedReplacementId
-                                  ? REPLACEMENT_POOL.find((x) => x.task_id === selectedReplacementId)
-                                  : undefined;
-                                await deferTask({
-                                  uid: user.id,
-                                  fromDay: user.currentDay ?? task.day,
-                                  task,
-                                  replacementTaskSnapshot: replacement
-                                    ? { ...replacement, day: task.day }
-                                    : undefined,
-                                });
-                                const targetDay = user.currentDay ?? task.day;
-                                await qc.invalidateQueries({ queryKey: ["deferrals", user.id, targetDay] });
-                                await qc.invalidateQueries({ queryKey: [api.tasks.today.path] });
-                                setSelectedReplacementId("");
-                              } catch (error: any) {
-                                toast({
-                                  title: "Errore nel rimandare",
-                                  description: error?.message || "Riprova.",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                            disabled={updateStatusMutation.isPending || isCompleted}
-                            className="flex-1 text-slate-600 hover:text-slate-800 border border-slate-200 hover:border-slate-300"
-                          >
-                            <SkipForward className="w-4 h-4 mr-2" />
-                            Rimanda a domani
-                          </Button>
+//                        if (!user) return;
 
-                          <Button
-                            onClick={handleComplete}
-                            disabled={updateStatusMutation.isPending}
-                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
-                          >
-                            <CheckCircle2 className="w-4 h-4 mr-2" />
-                            Segna come completato
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                        // Qui (per ora) rimando senza sostituzione
+
+  if (!user) {
+    console.error("❌ [DEBUG] user is undefined");
+    return;
+  }
+  if (!user.id) {
+    console.error("❌ [DEBUG] user.id is undefined - forse è user.uid?");
+    return;
+  }
+  if (task.day === undefined) {
+    console.error("❌ [DEBUG] task.day is undefined");
+    return;
+  }
+
+  try {
+ const replacement = selectedReplacementId
+        ? REPLACEMENT_POOL.find((x) => x.task_id === selectedReplacementId)
+        : undefined;
+
+
+                        await deferTask({
+                          uid: user.id, 	
+                          fromDay: user.currentDay ?? task.day, //task.day,
+                          task,
+replacementTaskSnapshot: replacement
+          ? { ...replacement, day: task.day } // 👈 per farlo risultare “di oggi”
+          : undefined,
+                        });
+
+
+  const targetDay = user.currentDay ?? task.day;
+    
+                        // ricarico deferrals + today
+//                          await qc.invalidateQueries({ queryKey: ["deferrals", user.id, user.currentDay ?? task.day] });
+
+  await qc.invalidateQueries({ queryKey: ["deferrals", user.id, targetDay] });
+
+                        await qc.invalidateQueries({ queryKey: [api.tasks.today.path] });
+
+
+ // reset select dopo l'azione
+      setSelectedReplacementId("");
+} catch (error: any) {
+    console.error("❌ [DEBUG] Errore in deferTask:", {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack?.split('\n')[0],
+      fullError: error,
+    });
+    // Optional: mostra un toast all'utente
+//     toast.error("Errore nel rimandare l'attività");
+     toast({
+                 title: "Errore nel rimandare l'attività!",
+                description: `Errore nel rimandare l'attività`,
+                variant: "default",
+    });
+  }
+                      }}
+                      disabled={updateStatusMutation.isPending || isCompleted}
+		      className="text-slate-600 hover:text-slate-800"
+                    >
+
+                      <SkipForward className="w-4 h-4 mr-2" />
+                      Rimanda a domani
+                    </Button>
+
+                    <Button
+
+                      onClick={handleComplete}
+                      disabled={updateStatusMutation.isPending}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Segna come completato
+                    </Button>
                   </>
                 )}
-
-              </div>
-
-               {isCompleted && (
+ 	   </>
+	)}
+ {isCompleted && (
    <div className="space-y-3">
     {/* Bottone stato */}
     <Button
@@ -603,7 +635,7 @@ const isPRO = user?.plan === "PRO" || false;
                     Saltato
                   </Button>
                 )}
-   {/*           </div> */}
+              </div>
 
 {/* ─────────────────────────────────────────────
     AVVISO: Task rimandato ≥ 3 volte (BONUS)

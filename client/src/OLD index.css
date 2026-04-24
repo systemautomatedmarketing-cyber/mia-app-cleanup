@@ -108,39 +108,3 @@
 .delay-100 { animation-delay: 100ms; }
 .delay-200 { animation-delay: 200ms; }
 .delay-300 { animation-delay: 300ms; }
-
-/* ── Safe area per notch iPhone (landscape) ── */
-:root {
-  --safe-top:    env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-left:   env(safe-area-inset-left, 0px);
-  --safe-right:  env(safe-area-inset-right, 0px);
-}
-
-/* Corpo principale: rispetta le safe area in landscape */
-#root {
-  padding-left: var(--safe-left);
-  padding-right: var(--safe-right);
-}
-
-/* Navbar bottom mobile: aggiunge safe-area-bottom per home indicator */
-nav.fixed {
-  padding-bottom: calc(0.5rem + var(--safe-bottom));
-}
-
-/* In landscape su mobile: la sidebar scompare e il contenuto usa tutta la larghezza */
-@media (max-height: 500px) and (orientation: landscape) {
-  /* Riduci padding verticale in landscape per guadagnare spazio */
-  .p-3 { padding: 0.5rem !important; }
-  
-  /* Header sticky più compatto in landscape */
-  header.sticky {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
-  }
-
-  /* KPIDialog: in landscape usa larghezza piena e scroll orizzontale */
-  [role="dialog"] > div {
-    max-height: 95dvh;
-  }
-}
