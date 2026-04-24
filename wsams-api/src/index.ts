@@ -45,7 +45,7 @@ const ALLOWED_ORIGINS = new Set([
   "https://social-growth-engine.web.app",
   "https://social-growth-engine.firebaseapp.com",
   "https://social-growth-engine.pages.dev",
-  "https://app.webstudioams.it",
+  "https://appsge.webstudioams.it",
 ]);
 
 const DEFAULT_ORIGIN = "http://localhost:5173";
@@ -1305,8 +1305,8 @@ if (request.method === "POST" && url.pathname === "/api/kpi") {
             "metadata[uid]": uid,
             "metadata[productType]": productType,
             "metadata[credits]": String(credits),
-            "success_url": `${env.APP_URL}/dashboard?payment=success`,
-            "cancel_url": `${env.APP_URL}/${isCredits ? "credits" : "pro"}?payment=cancelled`,
+            "success_url": `${env.APP_URL}dashboard?payment=success`,
+            "cancel_url": `${env.APP_URL}${isCredits ? "credits" : "pro"}?payment=cancelled`,
           }),
         });
 

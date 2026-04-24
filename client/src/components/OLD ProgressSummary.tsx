@@ -10,9 +10,11 @@ interface ProgressSummaryProps {
 
 export function ProgressSummary({ metrics, className = "" }: ProgressSummaryProps) {
   // 🔍 DEBUG: logga quando il componente viene renderizzato
+  console.log("🎨 [ProgressSummary] Render con metrics:", metrics);
 
   // ✅ FIX: Defensive coding - se metrics è undefined, mostra fallback
   if (!metrics) {
+    console.warn("⚠️ [ProgressSummary] metrics è undefined!");
     return (
       <div className={`p-4 bg-amber-50 border border-amber-200 rounded-xl ${className}`}>
         <p className="text-sm text-amber-800">⏳ Caricamento progresso...</p>

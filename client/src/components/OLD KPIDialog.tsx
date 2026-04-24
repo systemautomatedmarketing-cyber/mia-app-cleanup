@@ -15,124 +15,25 @@ import { useTasks } from "@/hooks/use-tasks";
 interface KPIDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  todayDay: number;
-  kpiForDay: number;
-  onSaved?: () => void;
+//  day: number;
+  todayDay: number;     // es: 2
+  kpiForDay: number;    // es: 1
+  onSaved?: () => void; // per refetch
 }
 
-// Stato con stringhe per permettere il campo vuoto durante la digitazione
-type KPIFormData = {
-  conversationsCount: string;
-  dmSent: string;
-  interestedContacts: string;
-  salesCount: string;
-  notes: string;
-};
-
+//export function KPIDialog({ open, onOpenChange, day }: KPIDialogProps) {
 export function KPIDialog({ open, onOpenChange, todayDay, kpiForDay, onSaved }: KPIDialogProps) {
+//  const { submitKpiMutation, completeDayMutation } = useTasks();
   const { submitKpiMutation } = useTasks();
-  const [data, setData] = useState<KPIFormData>({
-    conversationsCount: "",
-    dmSent: "",
-    interestedContacts: "",
-    salesCount: "",
+  const [data, setData] = useState({
+    conversationsCount: 0,
+    dmSent: 0,
+    interestedContacts: 0,
+    salesCount: 0,
     notes: "",
   });
 
   const handleSubmit = async () => {
-    try {
-      await submitKpiMutation.mutateAsync({
-        todayDay,
-        kpiForDay,
-        data: {
-          conversationsCount: Number(data.conversationsCount) || 0,
-          dmSent: Number(data.dmSent) || 0,
-          interestedContacts: Number(data.interestedContacts) || 0,
-          salesCount: Number(data.salesCount) || 0,
-          notes: data.notes,
-        },
-      });
-      onOpenChange(false);
-      onSaved?.();
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // Input numerico che gestisce correttamente il campo vuoto
-  const NumInput = ({
-    id, label, field,
-  }: { id: string; label: string; field: keyof Omit<KPIFormData, "notes"> }) => (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-sm font-medium">{label}</Label>
-      <Input
-        id={id}
-        inputMode="numeric"
-        pattern="[0-9]*"
-        placeholder="0"
-        value={data[field]}
-        onChange={(e) => {
-          const val = e.target.value.replace(/[^0-9]/g, "");
-          setData((prev) => ({ ...prev, [field]: val }));
-        }}
-        className="text-center text-lg font-bold h-12"
-      />
-    </div>
-  );
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-24px)] max-w-md mx-auto rounded-2xl p-0 gap-0 max-h-[90dvh] flex flex-col">
-        {/* Header fisso */}
-        <DialogHeader className="px-5 pt-5 pb-3 border-b border-slate-100 flex-shrink-0">
-          <DialogTitle className="text-base font-bold text-slate-900">
-            📊 KPI del Giorno {kpiForDay}
-          </DialogTitle>
-          <p className="text-xs text-slate-500 mt-1">
-            Dati onesti = crescita reale. Ci vogliono 30 secondi.
-          </p>
-        </DialogHeader>
-
-        {/* Corpo scrollabile */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {/* Griglia 2x2 dei numeri */}
-          <div className="grid grid-cols-2 gap-3">
-            <NumInput id="dms" label="DM inviati" field="dmSent" />
-            <NumInput id="convos" label="Conversazioni" field="conversationsCount" />
-            <NumInput id="leads" label="Lead interessati" field="interestedContacts" />
-            <NumInput id="sales" label="Vendite chiuse" field="salesCount" />
-          </div>
-
-          {/* Note */}
-          <div className="space-y-1.5">
-            <Label htmlFor="notes" className="text-sm font-medium">Note / Riflessioni</Label>
-            <Textarea
-              id="notes"
-              placeholder="Cosa ha funzionato? Cosa miglioreresti?"
-              value={data.notes}
-              onChange={(e) => setData((prev) => ({ ...prev, notes: e.target.value }))}
-              className="resize-none h-20 text-sm"
-            />
-          </div>
-        </div>
-
-        {/* Footer fisso */}
-        <DialogFooter className="px-5 pb-5 pt-3 border-t border-slate-100 flex-shrink-0">
-          <Button
-            onClick={handleSubmit}
-            disabled={submitKpiMutation.isPending}
-            className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl"
-          >
-            {submitKpiMutation.isPending ? "Salvataggio..." : "Salva i KPI →"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-//}
-
-
-  const handleSubmit2 = async () => {
 //  const handleCompleteDay = async () => {
     try {
       await submitKpiMutation.mutateAsync({

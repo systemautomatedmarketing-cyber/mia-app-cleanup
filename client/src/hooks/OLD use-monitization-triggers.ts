@@ -11,15 +11,16 @@ export function useMonetizationTriggers(user: any, completedToday: number) {
 
   useEffect(() => {
     // 🔍 DEBUG: vedi esattamente perché scatta o meno
-//    console.log("💰 [Monetization] Check:", {
-//      dismissed,
-//      plan: user?.plan,
-//      completedToday,
-//      isEligible: !dismissed && (user?.plan === "FREE" || user?.plan === "TRIAL") && completedToday >= 3
-//    });
+    console.log("💰 [Monetization] Check:", {
+      dismissed,
+      plan: user?.plan,
+      completedToday,
+      isEligible: !dismissed && (user?.plan === "FREE" || user?.plan === "TRIAL") && completedToday >= 3
+    });
 
     // ✅ FIX: Accetta sia "FREE" che "TRIAL"
     if (!dismissed && (user?.plan === "FREE" || user?.plan === "TRIAL") && completedToday >= 3) {
+      console.log("🔥 [Monetization] PROMPT ATTIVATO!");
       setShowProPrompt(true);
     }
   }, [completedToday, user?.plan, dismissed]);

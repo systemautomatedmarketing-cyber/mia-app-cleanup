@@ -11,23 +11,11 @@
         "*.local"
       ],
       "source": "functions"
-//    },
-//    {
-//      "source": "functions",
-//      "codebase": "social-growth-engine",
-//      "disallowLegacyRuntimeConfig": true,
-//      "ignore": [
-//        "node_modules",
-//        ".git",
-//        "firebase-debug.log",
-//        "firebase-debug.*.log",
-//        "*.local"
-//      ]
     }
   ],
   "firestore": {
-//    "rules": "firestore.rules",
-//    "indexes": "firebase.json"
+    "rules": "firestore.rules",
+    "indexes": "functions/firestore.indexes.json"
   },
   "hosting": {
     "target": "main",
@@ -55,10 +43,19 @@
       }
     ]
   },
- "emulators": {
-    "functions": { "port": 5001 },
-    "firestore": { "port": 8080 },
-    "hosting": { "port": 5000 },
-    "ui": { "enabled": true, "port": 4000 }
+  "emulators": {
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "hosting": {
+      "port": 5000
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    }
   }
 }

@@ -75,25 +75,3 @@ serviceAccountKey.json
 *.pem
  
  
-# File di test e setup con accesso admin — NON committare mai
-quick-test.ts
-test-setup.ts
-test-setup-admin.ts
-update-fcm-token.ts
-update-token.ps1
-test-utils.ps1
-
-# Variabili d'ambiente
-.env
-.env.local
-.env.production
-client/.env
-client/.env.local
-client/.env.production
-
-# Cartella build e dist
-dist/
-functions/lib/
-
-# Cartella doppia Worker
-wsams-api/wsams-api/

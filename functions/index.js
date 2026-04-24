@@ -21,10 +21,10 @@ exports.sendTestPush = onRequest(async (req, res) => {
       },
       webpush: {
         notification: {
-          icon: "https://app.webstudioams.it/icons/icon-192.png",
+          icon: "https://appsge.webstudioams.it/icons/icon-192.png",
         },
         fcmOptions: {
-          link: "https://app.webstudioams.it/",
+          link: "https://appsge.webstudioams.it",
         },
       },
     };

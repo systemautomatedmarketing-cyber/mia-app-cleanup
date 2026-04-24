@@ -111,7 +111,7 @@ export default function AuthPage() {
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Email</Label>
+                  <Label htmlFor="username">Email o Username</Label>
                   <Input 
                     id="username" 
                     placeholder="tu@esempio.it" 
@@ -189,7 +189,7 @@ export default function AuthPage() {
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="space-y-2">
                   <span className="font-semibold text-indigo-600">
-                    <Label htmlFor="reg-username">Email</Label>
+                    <Label htmlFor="reg-username">Email o Username</Label>
                   </span>
                   <Input 
                     id="reg-username" 

@@ -101,6 +101,32 @@ export function useTasks() {
   });
 
 
+//  const updateStatusMutation = useMutation({
+//    mutationFn: async ({
+//      taskId,
+//      status,
+//      day,
+//    }: {
+//      taskId: string;
+//      status: "Pending" | "Done" | "Skipped" | "Deferred";
+//      day: number;
+//    }) => {
+//      const url = buildUrl(api.tasks.updateStatus.path, { taskId });
+
+//      const res = await authFetch(url, {
+//        method: api.tasks.updateStatus.method,
+// //        headers: { "Content-Type": "application/json" },
+//        body: JSON.stringify({ status, day }),
+// //        credentials: "include",
+//      });
+// //      if (!res.ok) throw new Error("Failed to update status");
+//      if (!res.ok) throw new Error(await res.text());
+//      return res.json();
+//    },
+//    onSuccess: () => {
+//      queryClient.invalidateQueries({ queryKey: [api.tasks.today.path] });
+//    },
+//  });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ taskId, status, day }) => {
@@ -179,6 +205,15 @@ export function useTasks() {
 //      }
 
         const err = await res.json().catch(() => ({ message: 'Errore AI' }));
+        // ✅ FALLBACK: se l'AI fallisce, ritorna task manuale di riserva
+        if (res.status >= 500 || err.message.includes('unavailable')) {
+          return {
+            output: JSON.stringify({
+              content: `Ecco un template pronto: scrivi 3 frasi sulla tua esperienza con ${variables.topic || 'il tuo         prodotto'}. Usa un tono diretto e chiudi con una domanda per stimolare i commenti.`,
+              tips: 'Pubblica tra le 18:00 e le 20:00 per massimo reach.'
+            })
+          };
+        }
         throw new Error(err.message || 'Generazione fallita');
       }
 

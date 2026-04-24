@@ -1,6 +1,6 @@
 {
   "name": "Social Growth Engine",
-  "short_name": "SocialGrowth",
+  "short_name": "SGE",
   "description": "Il tuo piano di crescita social giornaliero",
   "start_url": "/dashboard",
   "display": "standalone",

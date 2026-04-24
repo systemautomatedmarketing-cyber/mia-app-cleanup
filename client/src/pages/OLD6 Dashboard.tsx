@@ -323,18 +323,12 @@ const tasksForUI = filterTasks(
     <div className="flex min-h-screen bg-slate-50">
       <Navigation />
 
-      <main className="flex-1 md:ml-0 pb-24 md:pb-8 overflow-x-hidden min-w-0">
+      <main className="flex-1 md:ml-0 pb-24 md:pb-8"> {/* overflow-x-hidden min-w-0"> */}
         <header className="sticky top-0 z-40 bg-slate-60/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex justify-between items-center">
           <div> 
-{/*            <h2 className="text-2xl font-display font-bold text-slate-900"> */}
-{/*              Giorno {user.currentDay} */}
-{/*            </h2> */}
-
-      {/* 📅 Giorno corrente (mobile) */}
-{/*      <div className="hidden md:block md:bg-indigo-100 px-3 py-1.5 rounded-full border border-indigo-100">  */}
-      <div className="hidden md:block md:bg-indigo-100 px-3 py-1.5 border text-center border-indigo-100"> 
-        <span className="text-xs font-bold text-indigo-900">Giorno {user.currentDay}</span>
-      </div> 
+            <h2 className="hidden md:block text-center text-2xl font-display font-bold text-slate-900"> 
+              Giorno {user.currentDay}
+            </h2> 
 
             <p className="text-sm text-slate-500 font-medium">
               {new Date().toLocaleDateString("it-IT", {
@@ -381,7 +375,7 @@ const tasksForUI = filterTasks(
                   style={{ width: `${progress}%` }}
                 />
               </div>
-            </div>  
+            </div> 
 </div> */}
 
 
@@ -528,7 +522,7 @@ const tasksForUI = filterTasks(
               </h3>
             </div>
 
-             {tasksForUI.map((task: any) => (
+            {tasksForUI.map((task: any) => (
               <TaskCard key={(task.__injected ? "inj-" : "") + task.task_id} task={task} 
                 onCompleteClick={(t: any) => {
                   // Se è KPI, apri la modale (solo se non è già Done)
@@ -574,15 +568,14 @@ const tasksForUI = filterTasks(
             </div>
           ))}
 
-          {/* Complete Day Button — nel flusso del documento, non sticky */}
-          {/* pb-6 md:pb-0: spazio extra per non sovrapporsi alla navbar bottom su mobile */}
-          <div className="flex justify-center pt-2 pb-6 md:pb-2">
+          {/* Complete Day Button */}
+          <div className="sticky bottom-20 md:bottom-8 flex justify-center pt-4">
             <Button
               size="lg"
               onClick={handleDayComplete}
               disabled={!isAllComplete}
               className={clsx(
-                "rounded-full px-8 py-6 text-lg font-bold shadow-2xl transition-all transform hover:-translate-y-1 w-full max-w-sm",
+                "rounded-full px-8 py-6 text-lg font-bold shadow-2xl transition-all transform hover:-translate-y-1",
                 isAllComplete
                   ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-200"
                   : "bg-slate-200 text-slate-400 cursor-not-allowed",

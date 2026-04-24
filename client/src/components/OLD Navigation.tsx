@@ -13,7 +13,9 @@ import { clsx } from "clsx";
 
 export function Navigation() {
   const [location] = useLocation();
-  const { user, logoutMutation } = useAuth();
+  const { user, logout } = useAuth();
+  const { logoutMutation } = useAuth();  
+//  const { user, logoutMutation  } = useAuth();
 
   if (!user) return null;
 
@@ -29,20 +31,10 @@ export function Navigation() {
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-border z-50 md:sticky md:top-0 md:h-screen md:w-64 md:border-r md:border-t-0 md:flex md:flex-col md:justify-between p-2 md:p-6 shadow-2xl md:shadow-none">
       <div className="hidden md:block mb-8">
         <div className="flex items-center gap-2">
-{/*          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
             WS
-          </div> */}
-<a href="https://www.webstudioams.it" target="_blank" className="flex items-center gap-2">
-<div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-    <img 
-      src="./icons/wsams-512.png" 
-      alt="Logo WebStudioAMS" 
-      className="w-full h-full object-contain"
-    />
-  </div>
+          </div>
           <span className="font-display font-bold text-xl tracking-tight">WebStudioAMS</span>
-</a>
-
         </div>
         <div className="mt-6 px-3 py-2 bg-indigo-50 rounded-lg border border-indigo-100">
           <p className="text-xs text-indigo-600 font-semibold uppercase tracking-wider mb-1">Giorno Corrente</p>

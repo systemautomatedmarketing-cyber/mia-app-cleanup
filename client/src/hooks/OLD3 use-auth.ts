@@ -63,6 +63,18 @@ export function useAuth() {
   },
 });
 
+//      const u = auth.currentUser;
+//      if (!u) return null;
+      // ritorniamo un oggetto minimo per non rompere la UI
+//      return {
+//        id: u.uid,
+//        email: u.email,
+//        currentDay: 1,
+//        creditsBalance: 0,
+//        plan: "FREE",
+//      };
+//    },
+//  });
 
   const loginMutation = useMutation({
     mutationFn: async ({ email, password }: { email: string; password: string }) => {
@@ -108,7 +120,8 @@ export function useAuth() {
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ email }: { email: string }) => {
       const auth = getAuth();
-      await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+      const normalized = email.trim().toLowerCase();
+      await sendPasswordResetEmail(auth, email);
       return true;
     },
   });

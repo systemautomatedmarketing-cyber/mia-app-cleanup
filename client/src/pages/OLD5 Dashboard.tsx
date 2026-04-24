@@ -47,6 +47,7 @@ import { HeaderProgress } from "@/components/HeaderProgress";
 import { useMonetizationTriggers } from "@/hooks/use-monitization-triggers";
 import { ProValuePreview } from "@/components/ProValuePreview";
 
+
 export default function Dashboard() {
 //  const { user } = useAuth();
   const { user, logoutMutation  } = useAuth();
@@ -323,7 +324,7 @@ const tasksForUI = filterTasks(
     <div className="flex min-h-screen bg-slate-50">
       <Navigation />
 
-      <main className="flex-1 md:ml-0 pb-24 md:pb-8 overflow-x-hidden min-w-0">
+      <main className="flex-1 md:ml-0 pb-24 md:pb-8">
         <header className="sticky top-0 z-40 bg-slate-60/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex justify-between items-center">
           <div> 
 {/*            <h2 className="text-2xl font-display font-bold text-slate-900"> */}
@@ -331,8 +332,7 @@ const tasksForUI = filterTasks(
 {/*            </h2> */}
 
       {/* 📅 Giorno corrente (mobile) */}
-{/*      <div className="hidden md:block md:bg-indigo-100 px-3 py-1.5 rounded-full border border-indigo-100">  */}
-      <div className="hidden md:block md:bg-indigo-100 px-3 py-1.5 border text-center border-indigo-100"> 
+      <div className="md:bg-indigo-100 px-3 py-1.5 rounded-full border border-indigo-100"> 
         <span className="text-xs font-bold text-indigo-900">Giorno {user.currentDay}</span>
       </div> 
 
@@ -353,7 +353,6 @@ const tasksForUI = filterTasks(
   credits={user?.creditsBalance || 0}
   plan={user?.plan || 'FREE'}
   currentDay={user?.currentDay || 1}
-  progress={progress || 0}
 />
 
 {/*            <div className="bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm flex items-center gap-2"> */}
@@ -366,23 +365,23 @@ const tasksForUI = filterTasks(
 {/*              </span> */}
 {/*            </div> */}
 
-{/*      <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+      <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
         <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" />
-        <div className="flex flex-col items-end"> */}
+        <div className="flex flex-col items-end">
 
 {/*            <div className="hidden md:flex flex-col items-end mr-4"> */}
 {/*              <span className="text-xs font-bold uppercase text-slate-400"> */}
 {/*                Progresso Giornaliero */}
 {/*              </span> */}
-{/*              <span className="text-[10px] font-bold text-slate-400 uppercase">Progresso Giornaliero</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Progresso Giornaliero</span>
               <div className="w-32 h-2 bg-slate-200 rounded-full mt-1 overflow-hidden">
                 <div
                   className="h-full bg-indigo-600 transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-            </div>  
-</div> */}
+            </div> 
+</div>
 
 
 {/*            <div className="bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm flex items-center gap-2"> */}
@@ -411,20 +410,12 @@ const tasksForUI = filterTasks(
                 <div className="mt-6 space-y-4">
         {/* Brand + Giorno */}
                   <div className="flex items-center gap-2">
-{/*                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
                       WS
-                    </div> */}
-<a href="https://www.webstudioams.it" target="_blank" className="flex items-center gap-2">
-<div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-      <img src="./icons/wsams-512.png" 
-          alt="Logo WebStudioAMS" 
-          className="w-full h-full object-contain"
-      />
-  </div>
+                    </div>
                     <span className="font-display font-bold text-lg tracking-tight">
                       WebStudioAMS
                     </span>
-</a>
                   </div>
 
                   <div className="px-3 py-2 bg-indigo-50 rounded-lg border border-indigo-100">
@@ -467,7 +458,7 @@ const tasksForUI = filterTasks(
 
         </header>
 
-        <div className="p-3 md:p-8 max-w-5xl mx-auto space-y-4 md:space-y-6">
+        <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
           {/* Motivation Banner — dinamico e personalizzato */}
           {(() => {
             const { title, message } = getMotivationalMessage(
@@ -477,7 +468,7 @@ const tasksForUI = filterTasks(
               progressMetrics
             );
             return (
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-5 md:p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
+              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 md:p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
                 <div className="relative z-10">
                   <h2 className="text-2xl md:text-3xl font-display font-bold mb-2">{title}</h2>
                   <p className="text-indigo-100 max-w-xl">{message}</p>
@@ -528,7 +519,12 @@ const tasksForUI = filterTasks(
               </h3>
             </div>
 
-             {tasksForUI.map((task: any) => (
+            <div className="md:hidden">
+             {tasksForUI.filter(
+                  (t: any) => t.goal === "ALL" || t.goal === user.goal).length || 0}
+            </div>
+
+            {tasksForUI.map((task: any) => (
               <TaskCard key={(task.__injected ? "inj-" : "") + task.task_id} task={task} 
                 onCompleteClick={(t: any) => {
                   // Se è KPI, apri la modale (solo se non è già Done)
@@ -574,15 +570,14 @@ const tasksForUI = filterTasks(
             </div>
           ))}
 
-          {/* Complete Day Button — nel flusso del documento, non sticky */}
-          {/* pb-6 md:pb-0: spazio extra per non sovrapporsi alla navbar bottom su mobile */}
-          <div className="flex justify-center pt-2 pb-6 md:pb-2">
+          {/* Complete Day Button */}
+          <div className="sticky bottom-20 md:bottom-8 flex justify-center pt-4">
             <Button
               size="lg"
               onClick={handleDayComplete}
               disabled={!isAllComplete}
               className={clsx(
-                "rounded-full px-8 py-6 text-lg font-bold shadow-2xl transition-all transform hover:-translate-y-1 w-full max-w-sm",
+                "rounded-full px-8 py-6 text-lg font-bold shadow-2xl transition-all transform hover:-translate-y-1",
                 isAllComplete
                   ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-200"
                   : "bg-slate-200 text-slate-400 cursor-not-allowed",
