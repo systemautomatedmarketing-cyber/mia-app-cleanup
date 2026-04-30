@@ -11,15 +11,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Gift, Zap, Loader2, Star } from "lucide-react";
 import { authFetch } from "@/lib/api";
 import { clsx } from "clsx";
-import { PromoBanner, PriceDisplay } from "@/components/PromoBanner";
-import { FULL_PRICES, PROMO_PRICES, isPromoActive } from "@/lib/promo-config";
 
-// Definizione pacchetti crediti — prezzi da promo-config
+// Definizione pacchetti crediti
 const CREDIT_PACKAGES = [
   {
     credits: 100,
-    get price() { return isPromoActive() ? PROMO_PRICES.credits_100 : FULL_PRICES.credits_100; },
-    fullPrice: FULL_PRICES.credits_100,
+    price: "€10,00",
     productType: "credits_100",
     label: "Starter",
     description: "10 generazioni AI",
@@ -28,8 +25,7 @@ const CREDIT_PACKAGES = [
   },
   {
     credits: 200,
-    get price() { return isPromoActive() ? PROMO_PRICES.credits_200 : FULL_PRICES.credits_200; },
-    fullPrice: FULL_PRICES.credits_200,
+    price: "€20,00",
     productType: "credits_200",
     label: "Plus",
     description: "20 generazioni AI",
@@ -38,8 +34,7 @@ const CREDIT_PACKAGES = [
   },
   {
     credits: 500,
-    get price() { return isPromoActive() ? PROMO_PRICES.credits_500 : FULL_PRICES.credits_500; },
-    fullPrice: FULL_PRICES.credits_500,
+    price: "€40,00",
     productType: "credits_500",
     label: "Pro",
     description: "50 generazioni AI",
@@ -131,9 +126,6 @@ export default function Credits() {
       <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8">
         <div className="max-w-2xl mx-auto space-y-8">
 
-          {/* Banner promo — compatto, sopra tutto */}
-          <PromoBanner variant="credits" />
-
           <header>
             <h1 className="text-3xl font-display font-bold text-slate-900">Centro Crediti</h1>
             <p className="text-slate-500">Gestisci i tuoi crediti AI e riscatta i premi.</p>
@@ -154,16 +146,12 @@ export default function Credits() {
             <Sparkles className="absolute right-[-20px] top-[-20px] w-64 h-64 text-indigo-500 opacity-20" />
           </div>
 
-          {/* Pacchetti crediti */}
+          {/* Pacchetti crediti
+              Layout: 2 colonne su mobile, 3 su desktop.
+              Su mobile il 3° pacchetto occupa tutta la larghezza (col-span-2).
+          */}
           <div>
-            <div className="flex items-baseline justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-900">Acquista crediti</h2>
-              {isPromoActive() && (
-                <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-200">
-                  Prezzi di lancio
-                </span>
-              )}
-            </div>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Acquista crediti</h2>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {CREDIT_PACKAGES.map((pkg, idx) => {
@@ -193,7 +181,6 @@ export default function Credits() {
                       </span>
                     )}
 
-
                     {/* Icona + label */}
                     <div className={clsx("w-9 h-9 rounded-xl flex items-center justify-center mb-3", styles.icon)}>
                       {pkg.color === "emerald" ? <Star className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
@@ -206,15 +193,9 @@ export default function Credits() {
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-0.5">crediti</p>
                     <p className="text-xs text-slate-400 mb-4">{pkg.description}</p>
 
-                    {/* Prezzo con barrato durante promo */}
+                    {/* Prezzo + pulsante */}
                     <div className="mt-auto">
-                      <div className="mb-2">
-                      <PriceDisplay
-                        fullPrice={(pkg as any).fullPrice ?? pkg.price}
-                        promoPrice={pkg.price}
-                        size="sm"
-                      />
-                      </div>
+                      <p className="text-sm font-bold text-slate-700 mb-2">{pkg.price}</p>
                       <Button
                         size="sm"
                         disabled={isAnyLoading}

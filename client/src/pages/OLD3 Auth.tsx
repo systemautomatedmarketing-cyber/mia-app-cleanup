@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,6 @@ import {
 import { isPromoActive, ACTIVE_PROMO, PROMO_PRICES, FULL_PRICES } from "@/lib/promo-config";
 import { motion } from "framer-motion";
 import { TermsDialog, PrivacyDialog, ConsentCheckbox } from "@/components/LegalDialogs";
-import { logAuthEvent, watchViewport } from "@/lib/auth-logger";
 
 // ── Validazione password ────────────────────────────────────────────────────
 function getPasswordStrength(pwd: string): {
@@ -196,73 +195,13 @@ export default function AuthPage() {
   const passwordsMatch = regPassword === regConfirm;
   const regStrength    = getPasswordStrength(regPassword);
 
-  // ── DIAGNOSTICS ────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
-
-  useEffect(() => {
-    logAuthEvent("page_open", { tab: "login" });
-
-    // Monitora resize viewport (tastiera che sale/scende)
-    let lastDelta = 0;
-    const stopWatching = watchViewport((delta) => {
-      if (Math.abs(delta - lastDelta) > 50) {
-        lastDelta = delta;
-        logAuthEvent("viewport_change", { tab: activeTab, viewportDelta: delta });
-      }
-    });
-
-    // Cattura errori JS non gestiti
-    const onError = (e: ErrorEvent) => {
-      logAuthEvent("js_error", {
-        tab: activeTab,
-        errorMessage: `${e.message} @ ${e.filename}:${e.lineno}`,
-      });
-    };
-    window.addEventListener("error", onError);
-
-    return () => {
-      stopWatching();
-      window.removeEventListener("error", onError);
-    };
-  }, []);
-
-  // Monitora focus sui campi password (viewport prima/dopo tastiera)
-  useEffect(() => {
-    const fields = document.querySelectorAll<HTMLInputElement>("input[type='password']");
-    const cleanups: Array<() => void> = [];
-
-    fields.forEach((field) => {
-      const viewportBefore = { width: window.innerWidth, height: window.innerHeight };
-      const onFocus = () => {
-        setTimeout(() => {
-          const viewportAfter = { width: window.innerWidth, height: window.innerHeight };
-          logAuthEvent("field_focus", {
-            tab: activeTab,
-            fieldName: field.id || "password",
-            viewportBefore,
-            viewportAfter,
-            viewportDelta: viewportBefore.height - viewportAfter.height,
-          });
-        }, 600);
-      };
-      const onBlur = () => logAuthEvent("field_blur", { tab: activeTab, fieldName: field.id || "password" });
-      field.addEventListener("focus", onFocus);
-      field.addEventListener("blur", onBlur);
-      cleanups.push(() => { field.removeEventListener("focus", onFocus); field.removeEventListener("blur", onBlur); });
-    });
-
-    return () => cleanups.forEach((fn) => fn());
-  }, [activeTab]);
-  // ── END DIAGNOSTICS ────────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    logAuthEvent("login_attempt", { tab: "login" });
     try {
       await loginMutation.mutateAsync({ email: loginEmail.trim().toLowerCase(), password: loginPassword });
-      logAuthEvent("login_success", { tab: "login" });
     } catch (err: any) {
-      logAuthEvent("login_error", { tab: "login", errorCode: err.code, errorMessage: err.message });
       const msg = err.code === "auth/invalid-credential" || err.code === "auth/wrong-password"
         ? "Email o password non corretti. Riprova."
         : err.code === "auth/too-many-requests"
@@ -286,12 +225,9 @@ export default function AuthPage() {
       toast({ variant: "destructive", title: "Consenso richiesto", description: "Devi accettare i Termini di Servizio e la Privacy Policy per continuare." });
       return;
     }
-    logAuthEvent("register_attempt", { tab: "register" });
     try {
       await registerMutation.mutateAsync({ email: regEmail.trim().toLowerCase(), password: regPassword });
-      logAuthEvent("register_success", { tab: "register" });
     } catch (err: any) {
-      logAuthEvent("register_error", { tab: "register", errorCode: err.code, errorMessage: err.message });
       const msg = err.code === "auth/email-already-in-use"
         ? "Questa email è già registrata. Prova ad accedere."
         : err.code === "auth/invalid-email"
@@ -327,19 +263,19 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 flex flex-col lg:items-center lg:justify-center p-4 lg:p-0 relative overflow-y-auto">
+    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4 lg:p-0 relative overflow-hidden">
       {/* Background blobs su mobile */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none lg:hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none lg:hidden">
         <div className="absolute -top-20 -left-20 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30" />
         <div className="absolute top-0 -right-20 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30" />
         <div className="absolute -bottom-20 left-20 w-96 h-96 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-25" />
       </div>
 
       {/* Layout: colonna destra su mobile, 2 colonne su desktop */}
-      <div className="relative z-10 w-full max-w-5xl lg:grid lg:grid-cols-2 lg:rounded-3xl lg:shadow-2xl lg:overflow-hidden lg:border lg:border-slate-200 my-auto">
+      <div className="relative z-10 w-full max-w-5xl lg:h-screen lg:max-h-[780px] lg:grid lg:grid-cols-2 lg:rounded-3xl lg:shadow-2xl lg:overflow-hidden lg:border lg:border-slate-200">
 
-        {/* ── Lato destro: form ── */}
-        <div className="flex flex-col bg-white px-6 py-8 md:px-10 overflow-y-auto lg:justify-center">
+        {/* ── Lato sinistro: form ── */}
+        <div className="flex flex-col justify-center bg-white px-6 py-8 md:px-10 overflow-y-auto">
 
           {/* Logo mobile */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
@@ -354,15 +290,7 @@ export default function AuthPage() {
           </div>
 
           {/* Tabs */}
-          <Tabs
-            defaultValue="login"
-            className="w-full"
-            onValueChange={(v) => {
-              const tab = v as "login" | "register";
-              setActiveTab(tab);
-              logAuthEvent("page_open", { tab });
-            }}
-          >
+          <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">Accedi</TabsTrigger>
               <TabsTrigger value="register">Crea account</TabsTrigger>
@@ -531,7 +459,7 @@ export default function AuthPage() {
             </TabsContent>
           </Tabs>
         </div>
-        {/* ── Lato sinistro marketing (solo desktop) ── */}
+        {/* ── Lato destro marketing (solo desktop / in basso per mobile) ── */}
         <MarketingSide />
       </div>
     </div>

@@ -30,6 +30,7 @@ const CREDIT_PACKAGES = [
     credits: 200,
     get price() { return isPromoActive() ? PROMO_PRICES.credits_200 : FULL_PRICES.credits_200; },
     fullPrice: FULL_PRICES.credits_200,
+    price: "€20,00",
     productType: "credits_200",
     label: "Plus",
     description: "20 generazioni AI",
@@ -40,6 +41,7 @@ const CREDIT_PACKAGES = [
     credits: 500,
     get price() { return isPromoActive() ? PROMO_PRICES.credits_500 : FULL_PRICES.credits_500; },
     fullPrice: FULL_PRICES.credits_500,
+    price: "€40,00",
     productType: "credits_500",
     label: "Pro",
     description: "50 generazioni AI",
@@ -132,7 +134,7 @@ export default function Credits() {
         <div className="max-w-2xl mx-auto space-y-8">
 
           {/* Banner promo — compatto, sopra tutto */}
-          <PromoBanner variant="credits" />
+          <PromoBanner variant="compact" />
 
           <header>
             <h1 className="text-3xl font-display font-bold text-slate-900">Centro Crediti</h1>
@@ -193,6 +195,9 @@ export default function Credits() {
                       </span>
                     )}
 
+{ console.log("Credits: ", pkg.credits) }
+{ console.log("fullPrice: ", (pkg as any).fullPrice ?? pkg.price) }
+{ console.log("promoPrice: ", pkg.price) }
 
                     {/* Icona + label */}
                     <div className={clsx("w-9 h-9 rounded-xl flex items-center justify-center mb-3", styles.icon)}>
@@ -208,13 +213,11 @@ export default function Credits() {
 
                     {/* Prezzo con barrato durante promo */}
                     <div className="mt-auto">
-                      <div className="mb-2">
                       <PriceDisplay
                         fullPrice={(pkg as any).fullPrice ?? pkg.price}
                         promoPrice={pkg.price}
                         size="sm"
                       />
-                      </div>
                       <Button
                         size="sm"
                         disabled={isAnyLoading}

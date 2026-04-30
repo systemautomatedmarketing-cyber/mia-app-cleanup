@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,6 @@ import {
 import { isPromoActive, ACTIVE_PROMO, PROMO_PRICES, FULL_PRICES } from "@/lib/promo-config";
 import { motion } from "framer-motion";
 import { TermsDialog, PrivacyDialog, ConsentCheckbox } from "@/components/LegalDialogs";
-import { logAuthEvent, watchViewport } from "@/lib/auth-logger";
 
 // ── Validazione password ────────────────────────────────────────────────────
 function getPasswordStrength(pwd: string): {
@@ -196,73 +195,13 @@ export default function AuthPage() {
   const passwordsMatch = regPassword === regConfirm;
   const regStrength    = getPasswordStrength(regPassword);
 
-  // ── DIAGNOSTICS ────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
-
-  useEffect(() => {
-    logAuthEvent("page_open", { tab: "login" });
-
-    // Monitora resize viewport (tastiera che sale/scende)
-    let lastDelta = 0;
-    const stopWatching = watchViewport((delta) => {
-      if (Math.abs(delta - lastDelta) > 50) {
-        lastDelta = delta;
-        logAuthEvent("viewport_change", { tab: activeTab, viewportDelta: delta });
-      }
-    });
-
-    // Cattura errori JS non gestiti
-    const onError = (e: ErrorEvent) => {
-      logAuthEvent("js_error", {
-        tab: activeTab,
-        errorMessage: `${e.message} @ ${e.filename}:${e.lineno}`,
-      });
-    };
-    window.addEventListener("error", onError);
-
-    return () => {
-      stopWatching();
-      window.removeEventListener("error", onError);
-    };
-  }, []);
-
-  // Monitora focus sui campi password (viewport prima/dopo tastiera)
-  useEffect(() => {
-    const fields = document.querySelectorAll<HTMLInputElement>("input[type='password']");
-    const cleanups: Array<() => void> = [];
-
-    fields.forEach((field) => {
-      const viewportBefore = { width: window.innerWidth, height: window.innerHeight };
-      const onFocus = () => {
-        setTimeout(() => {
-          const viewportAfter = { width: window.innerWidth, height: window.innerHeight };
-          logAuthEvent("field_focus", {
-            tab: activeTab,
-            fieldName: field.id || "password",
-            viewportBefore,
-            viewportAfter,
-            viewportDelta: viewportBefore.height - viewportAfter.height,
-          });
-        }, 600);
-      };
-      const onBlur = () => logAuthEvent("field_blur", { tab: activeTab, fieldName: field.id || "password" });
-      field.addEventListener("focus", onFocus);
-      field.addEventListener("blur", onBlur);
-      cleanups.push(() => { field.removeEventListener("focus", onFocus); field.removeEventListener("blur", onBlur); });
-    });
-
-    return () => cleanups.forEach((fn) => fn());
-  }, [activeTab]);
-  // ── END DIAGNOSTICS ────────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    logAuthEvent("login_attempt", { tab: "login" });
     try {
       await loginMutation.mutateAsync({ email: loginEmail.trim().toLowerCase(), password: loginPassword });
-      logAuthEvent("login_success", { tab: "login" });
     } catch (err: any) {
-      logAuthEvent("login_error", { tab: "login", errorCode: err.code, errorMessage: err.message });
       const msg = err.code === "auth/invalid-credential" || err.code === "auth/wrong-password"
         ? "Email o password non corretti. Riprova."
         : err.code === "auth/too-many-requests"
@@ -286,12 +225,9 @@ export default function AuthPage() {
       toast({ variant: "destructive", title: "Consenso richiesto", description: "Devi accettare i Termini di Servizio e la Privacy Policy per continuare." });
       return;
     }
-    logAuthEvent("register_attempt", { tab: "register" });
     try {
       await registerMutation.mutateAsync({ email: regEmail.trim().toLowerCase(), password: regPassword });
-      logAuthEvent("register_success", { tab: "register" });
     } catch (err: any) {
-      logAuthEvent("register_error", { tab: "register", errorCode: err.code, errorMessage: err.message });
       const msg = err.code === "auth/email-already-in-use"
         ? "Questa email è già registrata. Prova ad accedere."
         : err.code === "auth/invalid-email"
@@ -354,15 +290,7 @@ export default function AuthPage() {
           </div>
 
           {/* Tabs */}
-          <Tabs
-            defaultValue="login"
-            className="w-full"
-            onValueChange={(v) => {
-              const tab = v as "login" | "register";
-              setActiveTab(tab);
-              logAuthEvent("page_open", { tab });
-            }}
-          >
+          <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">Accedi</TabsTrigger>
               <TabsTrigger value="register">Crea account</TabsTrigger>

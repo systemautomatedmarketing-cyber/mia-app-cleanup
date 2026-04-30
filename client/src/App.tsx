@@ -8,6 +8,8 @@ import { Loader2 } from "lucide-react";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 
+import AuthPage2 from "@/pages/Auth2";
+
 import AuthPage from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Onboarding from "@/pages/Onboarding";
@@ -83,6 +85,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/auth2" component={AuthPage2} />
       <Route path="/pro" component={Pro} />
       
       <Route path="/dashboard">

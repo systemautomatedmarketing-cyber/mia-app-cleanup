@@ -146,7 +146,7 @@ export default function Pro() {
                 </>
               )}
               <p className="text-center text-xs text-slate-400">
-                🔒 Pagamento sicuro con carta di credito · Rimborso garantito 14 giorni
+                🔒 Pagamento sicuro via Stripe · Rimborso garantito 14 giorni
               </p>
             </div>
           </div>

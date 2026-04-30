@@ -144,21 +144,3 @@ nav.fixed {
     max-height: 95dvh;
   }
 }
-
-/* ── Fix tastiera virtuale mobile (keyboard-pushes-layout) ──────────────────
-   Quando la tastiera virtuale appare su iOS/Android, il viewport si riduce.
-   Questo previene il "schermo bianco" sui form con molti campi.
-   dvh = dynamic viewport height (si adatta alla tastiera)
-   svh = small viewport height (usa l'altezza minima, con tastiera aperta)
-*/
-.min-h-screen {
-  min-height: 100dvh;
-}
-
-/* Previene che i form vengano spinti fuori dallo schermo */
-input[type="password"],
-input[type="email"],
-input[type="text"] {
-  /* Previene lo zoom automatico su iOS (che causa il layout shift) */
-  font-size: max(16px, 1em);
-}

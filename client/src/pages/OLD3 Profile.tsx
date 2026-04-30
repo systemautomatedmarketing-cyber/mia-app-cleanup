@@ -242,8 +242,8 @@ export default function Profile() {
                 <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="Es. Studio Rossi, FitCoach Marco..." />
               </div>
               <div className="space-y-1.5">
-                <Label>Sito web o link bio principale</Label>
-                <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://... (il link che metti nella bio dei tuoi social)" />
+                <Label>Sito web o link bio</Label>
+                <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://..." />
               </div>
             </div>
             <Button

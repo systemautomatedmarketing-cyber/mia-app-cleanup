@@ -489,50 +489,34 @@ const tasksForUI = filterTasks(
 {/*
  <FilterSettings 
   onFiltersChanged={(newSettings) => {
+    // ✅ Aggiorna manualmente l'oggetto user con i nuovi filterSettings
+    // (questo forza il ricalcolo di filterTasks al prossimo render)
+    
+    // Opzione A: Se usi un context/provider per user, aggiornalo lì
+    // Opzione B: Usa un state locale per sovrascrivere filterSettings
     setLocalFilterSettings(newSettings);
+    
+    // Refetch dei task per applicare i nuovi filtri
     todayQuery.refetch();
   }} 
  />
-*/}
-
-          {/* Banner promos TOP — WELCOME in verde, PRO in indigo */}
-          {promos.filter(p => p.placement === "TOP").map((p) => {
-            const isWelcome = p.kind === "WELCOME";
-            const isPromo = p.kind === "PRO";
-            return (
-              <div
-                key={p.id}
-                className={`rounded-2xl p-5 md:p-6 shadow-lg relative overflow-hidden ${
-                  isWelcome
-                    ? "bg-gradient-to-r from-emerald-500 to-teal-600 shadow-emerald-200"
-                    : "bg-gradient-to-r from-indigo-600 to-purple-600 shadow-indigo-200"
-                }`}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative z-10">
-                  <div className="min-w-0">
-                    <p className="font-bold text-white text-base md:text-lg leading-snug">
-                      {p.title}
-                    </p>
-                    <p className={`text-sm mt-1 ${isWelcome ? "text-emerald-100" : "text-indigo-100"}`}>
-                      {p.text}
-                    </p>
-                  </div>
-                  <Button
-                    className={`flex-shrink-0 font-bold shadow-sm ${
-                      isWelcome
-                        ? "bg-white text-emerald-700 hover:bg-emerald-50"
-                        : "bg-white/20 hover:bg-white/30 text-white border border-white/30"
-                    }`}
-                    onClick={() => (window.location.href = p.ctaUrl)}
-                  >
-                    {p.ctaLabel}
-                  </Button>
-                </div>
-                {/* Cerchio decorativo */}
-                <div className="absolute right-[-24px] bottom-[-24px] w-32 h-32 bg-white/10 rounded-full pointer-events-none" />
+          {promos.filter(p => p.placement === "TOP").map((p) => (
+            <div key={p.id} className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 md:p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
+              <div className="relative z-10">
+                <h2 className="text-2xl md:text-3xl font-display font-bold mb-2">{p.title}</h2> 
+                <p className="text-indigo-100 max-w-xl">{p.text}</p>
               </div>
-            );
-          })}
+
+                <Button
+                  className="mt-3 bg-indigo-600 hover:bg-indigo-700 text-white"
+                  onClick={() => (window.location.href = p.ctaUrl)}
+                >
+                  {p.ctaLabel}
+                </Button>
+            </div>
+
+          ))}
+*/}
           {/* Task List */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">

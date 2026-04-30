@@ -13,10 +13,8 @@ import { api } from "@shared/routes";
 import {
   User, Mail, Lock, Target, Globe, Briefcase,
   TrendingUp, Edit3, Check, X, Loader2, ChevronDown, ChevronUp,
-  FileText, Shield,
 } from "lucide-react";
 import { clsx } from "clsx";
-import { TermsDialog, PrivacyDialog } from "@/components/LegalDialogs";
 
 // Sezione collassabile
 function Section({
@@ -242,8 +240,8 @@ export default function Profile() {
                 <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="Es. Studio Rossi, FitCoach Marco..." />
               </div>
               <div className="space-y-1.5">
-                <Label>Sito web o link bio principale</Label>
-                <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://... (il link che metti nella bio dei tuoi social)" />
+                <Label>Sito web o link bio</Label>
+                <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://..." />
               </div>
             </div>
             <Button
@@ -411,54 +409,6 @@ export default function Profile() {
               </a>
             )}
           </Section>
-
-          {/* ── NOTE LEGALI ── */}
-          <div className="bg-white rounded-2xl border border-slate-200 px-6 py-5">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">
-              Note legali
-            </p>
-            <div className="space-y-3">
-              <TermsDialog
-                trigger={
-                  <button className="w-full flex items-center justify-between group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-4 h-4 text-slate-500" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-sm font-semibold text-slate-900">Termini di Servizio</p>
-                        <p className="text-xs text-slate-400">Condizioni d'uso della piattaforma</p>
-                      </div>
-                    </div>
-                    <ChevronDown className="w-4 h-4 text-slate-400 -rotate-90 group-hover:text-indigo-600 transition-colors" />
-                  </button>
-                }
-              />
-
-              <div className="h-px bg-slate-100" />
-
-              <PrivacyDialog
-                trigger={
-                  <button className="w-full flex items-center justify-between group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0">
-                        <Shield className="w-4 h-4 text-slate-500" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-sm font-semibold text-slate-900">Privacy Policy</p>
-                        <p className="text-xs text-slate-400">Come trattiamo i tuoi dati · GDPR</p>
-                      </div>
-                    </div>
-                    <ChevronDown className="w-4 h-4 text-slate-400 -rotate-90 group-hover:text-indigo-600 transition-colors" />
-                  </button>
-                }
-              />
-            </div>
-
-            <p className="text-[10px] text-slate-400 mt-4 text-center">
-              Social Growth Engine · info@webstudioams.it
-            </p>
-          </div>
 
         </div>
       </main>

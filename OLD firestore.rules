@@ -22,12 +22,5 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.userId == request.auth.uid;
     }
-
-    // Diagnostics auth: scrittura aperta anche a utenti non loggati
-    // (cattura errori PRIMA del login). Lettura solo da Firebase Console.
-    match /auth_diagnostics/{docId} {
-      allow create: if true;
-      allow read, update, delete: if false;
-    }
   }
 }

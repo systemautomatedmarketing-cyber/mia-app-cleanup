@@ -246,10 +246,8 @@ const handleComplete = async () => {
                 <Clock className="w-3 h-3" /> {task.estimated_time}
               </span>
               {task.ai_support_available === "YES" && (
-                <span className="text-xs font-bold text-purple-700 flex items-center gap-1.5 bg-purple-100 px-2.5 py-1 rounded-full border border-purple-200">
-                  <Bot className="w-3 h-3 flex-shrink-0" />
-                  Potenziato da AI
-                  {!expanded && <span className="text-purple-400 font-normal hidden sm:inline">· apri per generare</span>}
+                <span className="text-xs font-semibold text-purple-600 flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">
+                  <Bot className="w-3 h-3" /> Potenziato da AI
                 </span>
               )}
             </div>
@@ -420,15 +418,6 @@ const isPRO = user?.plan === "PRO" || false;
 )
   
                         })()}
-
-                        {/* SPIEGAZIONE CREDITI — solo FREE/TRIAL */}
-                        {(user?.plan === "FREE" || user?.plan === "TRIAL") && (
-                          <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-100 text-xs text-indigo-800 space-y-1">
-                            <p className="font-bold">Come funzionano i crediti?</p>
-                            <p>I crediti <strong>non finiscono per sempre</strong>: puoi ricaricarli dalla sezione Crediti quando vuoi. Non scadono.</p>
-                            <p>Con il piano PRO, la generazione AI è illimitata senza crediti.</p>
-                          </div>
-                        )}
                       </div>
 
                       <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -614,7 +603,7 @@ const isPRO = user?.plan === "PRO" || false;
                     Saltato
                   </Button>
                 )}
-{/*              </div> */}
+   {/*           </div> */}
 
 {/* ─────────────────────────────────────────────
     AVVISO: Task rimandato ≥ 3 volte (BONUS)

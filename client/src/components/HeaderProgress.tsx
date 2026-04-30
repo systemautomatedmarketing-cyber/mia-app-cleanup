@@ -30,6 +30,19 @@ export function HeaderProgress({ metrics, credits, plan, currentDay, progress }:
         <span className="text-xs font-bold text-indigo-900">Giorno {currentDay}</span>
       </div> 
 
+      {/* Crediti + Piano */}
+      <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-full border border-slate-200 shadow-sm">
+        <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500 flex-shrink-0" />
+        <span className="text-xs font-bold text-slate-900">{credits}</span>
+        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+          plan === "PRO" ? "bg-indigo-100 text-indigo-700" :
+          plan === "TRIAL" ? "bg-amber-100 text-amber-700" :
+          "bg-slate-100 text-slate-600"
+        }`}>
+          {plan}
+        </span>
+      </div>
+
       <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
         <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" />
         <div className="flex flex-col items-end">
@@ -43,18 +56,6 @@ export function HeaderProgress({ metrics, credits, plan, currentDay, progress }:
             </div> 
       </div> 
 
-      {/* Crediti + Piano */}
-      <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-full border border-slate-200 shadow-sm">
-        <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500 flex-shrink-0" />
-        <span className="text-xs font-bold text-slate-900">{credits}</span>
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-          plan === "PRO" ? "bg-indigo-100 text-indigo-700" :
-          plan === "TRIAL" ? "bg-amber-100 text-amber-700" :
-          "bg-slate-100 text-slate-600"
-        }`}>
-          {plan}
-        </span>
-      </div>
 
       {/* Progresso obiettivo — sempre visibile */}
       <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm min-w-0">

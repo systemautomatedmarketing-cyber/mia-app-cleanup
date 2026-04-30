@@ -9,10 +9,10 @@ import { PromoBanner, PriceDisplay } from "@/components/PromoBanner";
 import { FULL_PRICES, PROMO_PRICES, isPromoActive, ACTIVE_PROMO } from "@/lib/promo-config";
 
 const FEATURES = [
-  { icon: Zap,        text: "Generazione AI illimitata",  detail: "Nessun limite di crediti per i contenuti" },
-  { icon: TrendingUp, text: "Percorso 60 e 90 giorni",    detail: "Task avanzati per chi vuole crescere di più" },
-  { icon: Shield,     text: "Supporto prioritario",       detail: "Risposta entro 24h via email" },
-  { icon: Clock,      text: "Dashboard KPI avanzata",     detail: "Metriche dettagliate e insight AI (presto)" },
+  { icon: Zap,         text: "Generazione AI illimitata",    detail: "Nessun limite di crediti per i contenuti" },
+  { icon: TrendingUp,  text: "Percorso 60 e 90 giorni",      detail: "Task avanzati per chi vuole crescere di più" },
+  { icon: Shield,      text: "Supporto prioritario",         detail: "Risposta entro 24h via email" },
+  { icon: Clock,       text: "Dashboard KPI avanzata",       detail: "Metriche dettagliate e insight AI (presto)" },
 ];
 
 export default function Pro() {
@@ -50,8 +50,8 @@ export default function Pro() {
       <main className="flex-1 overflow-x-hidden pb-24 md:pb-8 landscape:pb-4">
         <div className="max-w-2xl mx-auto px-4 py-6 md:py-10 space-y-5">
 
-          {/* ── Messaggio urgenza (no countdown) ── */}
-          <PromoBanner variant="pro" />
+          {/* ── Banner countdown ── */}
+          <PromoBanner variant="full" />
 
           {/* ── Hero ── */}
           <div className="text-center space-y-2">
@@ -60,7 +60,7 @@ export default function Pro() {
                 ✓ Piano PRO attivo
               </span>
             ) : promoOn ? (
-              <span className="inline-block bg-amber-500 text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
+              <span className="inline-block bg-amber-100 text-amber-700 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
                 {ACTIVE_PROMO.badge} · -{ACTIVE_PROMO.discountPct}% di sconto
               </span>
             ) : (
@@ -79,25 +79,20 @@ export default function Pro() {
           {/* ── Card principale ── */}
           <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
 
-            {/* Header card scuro — prezzo in bianco su sfondo slate-900 */}
-            <div className="bg-slate-900 px-6 py-7 space-y-2">
-              {/* PriceDisplay con variant="on-dark" → testo bianco visibile */}
+            {/* Header card */}
+            <div className="bg-slate-900 px-6 py-7">
               <PriceDisplay
                 fullPrice={FULL_PRICES.pro}
                 promoPrice={PROMO_PRICES.pro}
                 size="lg"
-                variant="on-dark"
               />
-              <p className="text-slate-400 text-sm">
+              <p className="text-slate-400 text-sm mt-1">
                 Accesso completo · Una tantum · Per sempre
               </p>
               {promoOn && (
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                  <p className="text-amber-400 text-xs font-semibold">
-                    {ACTIVE_PROMO.reason} — dopo tornerà a {FULL_PRICES.pro}
-                  </p>
-                </div>
+                <p className="text-amber-400 text-xs font-semibold mt-2">
+                  ⚡ Risparmia {FULL_PRICES.pro} → {PROMO_PRICES.pro} · {ACTIVE_PROMO.reason}
+                </p>
               )}
             </div>
 
@@ -125,28 +120,21 @@ export default function Pro() {
                   <span className="font-semibold text-emerald-700">Piano PRO attivo</span>
                 </div>
               ) : (
-                <>
-                  <Button
-                    size="lg"
-                    onClick={handleUpgrade}
-                    disabled={loading}
-                    className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 text-base"
-                  >
-                    {loading
-                      ? <><Loader2 className="w-5 h-5 animate-spin mr-2" />Apertura checkout...</>
-                      : promoOn
-                        ? `Sì, voglio PRO a ${PROMO_PRICES.pro} →`
-                        : "Aggiorna a PRO →"}
-                  </Button>
-                  {promoOn && (
-                    <p className="text-center text-xs text-amber-700 font-medium">
-                      Al prezzo normale costerebbe {FULL_PRICES.pro}. Stai risparmiando {ACTIVE_PROMO.discountPct}%.
-                    </p>
-                  )}
-                </>
+                <Button
+                  size="lg"
+                  onClick={handleUpgrade}
+                  disabled={loading}
+                  className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 text-base"
+                >
+                  {loading
+                    ? <><Loader2 className="w-5 h-5 animate-spin mr-2" />Apertura checkout...</>
+                    : promoOn
+                      ? `Aggiorna a PRO · ${PROMO_PRICES.pro} →`
+                      : "Aggiorna a PRO →"}
+                </Button>
               )}
               <p className="text-center text-xs text-slate-400">
-                🔒 Pagamento sicuro con carta di credito · Rimborso garantito 14 giorni
+                🔒 Pagamento sicuro via Stripe · Rimborso garantito 14 giorni
               </p>
             </div>
           </div>
@@ -156,21 +144,17 @@ export default function Pro() {
             {[
               {
                 q: "Cosa succede dopo il pagamento?",
-                a: "Il tuo piano viene attivato immediatamente. I task del percorso avanzato e l'AI illimitata diventano disponibili in meno di un minuto.",
+                a: "Il tuo piano viene attivato immediatamente. I task del percorso avanzato diventano subito disponibili.",
               },
               {
                 q: "Posso chiedere il rimborso?",
                 a: "Sì, entro 14 giorni dal pagamento senza domande. Scrivi a info@webstudioams.it.",
               },
               {
-                q: promoOn ? "Perché questo prezzo così basso?" : "Il prezzo include aggiornamenti futuri?",
+                q: promoOn ? "Quando scade questa offerta?" : "Il prezzo include aggiornamenti futuri?",
                 a: promoOn
-                  ? `Siamo in fase di lancio e vogliamo che i primi utenti diventino i nostri ambasciatori. In cambio del loro feedback e della fiducia, blocchiamo il prezzo. Non sarà sempre così: una volta raggiunto il target di utenti, il PRO tornerà a ${FULL_PRICES.pro}.`
+                  ? `L'offerta "${ACTIVE_PROMO.label}" scade automaticamente alla data indicata nel countdown sopra. Dopo, il prezzo tornerà a ${FULL_PRICES.pro}.`
                   : "Sì. Tutte le funzionalità future del piano PRO sono incluse senza costi aggiuntivi.",
-              },
-              {
-                q: "Devo rinnovare ogni anno?",
-                a: "No. È un pagamento unico. Non ci sono abbonamenti, non ci sono rinnovi, non ci saranno sorprese in bolletta.",
               },
             ].map(({ q, a }) => (
               <div key={q} className="bg-white rounded-2xl border border-slate-200 px-5 py-4">
