@@ -6,7 +6,7 @@ import { TaskCard } from "@/components/TaskCard";
 import { KPIDialog } from "@/components/KPIDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, Trophy, Loader2, Sparkles } from "lucide-react";
+import { CheckCircle2, Trophy, Loader2, Sparkles, PlayCircle } from "lucide-react";
 import { clsx } from "clsx";
 import confetti from "canvas-confetti";
 import {
@@ -41,6 +41,9 @@ import { FilterSettings } from "@/components/FilterSettings";
 
 import { calculateProgressMetrics } from "@/hooks/use-progress-tracker";
 import { getMotivationalMessage } from "@/lib/motivational-messages";
+import { ProductTour } from "@/components/ProductTour";
+import { useTour } from "@/hooks/use-tour";
+import { getDashboardSteps } from "@/lib/tour-steps";
 //import { ProgressSummary } from "@/components/ProgressSummary";
 import { HeaderProgress } from "@/components/HeaderProgress";
 
@@ -134,6 +137,7 @@ useEffect(() => {
 }, [user?.id, user?.filterSettings]);
 
   const { todayQuery, completeDayMutation } = useTasks();
+  const { showTour, markSectionDone, restartTour } = useTour("dashboard");
   const [kpiOpen, setKpiOpen] = useState(false);
   const [celebrateOpen, setCelebrateOpen] = useState(false);
   // Traccia se il KPI dialog è già stato mostrato in questa sessione
@@ -334,8 +338,7 @@ const tasksForUI = filterTasks(
 {/*      <div className="hidden md:block md:bg-indigo-100 px-3 py-1.5 rounded-full border border-indigo-100">  */}
       <div className="hidden md:block md:bg-indigo-100 px-3 py-1.5 border text-center border-indigo-100"> 
         <span className="text-xs font-bold text-indigo-900">Giorno {user.currentDay}</span>
-      </div> 
-
+      </div>
             <p className="text-sm text-slate-500 font-medium">
               {new Date().toLocaleDateString("it-IT", {
                 weekday: "long",
@@ -343,9 +346,7 @@ const tasksForUI = filterTasks(
                 day: "numeric",
               })}
             </p>
-          </div>
-
-          <div className="flex items-center gap-3">
+         </div>
 
 {/* ✅ NUOVO HEADER CON PROGRESS INTEGRATO */}
 <HeaderProgress 
@@ -392,7 +393,7 @@ const tasksForUI = filterTasks(
 {/*                Piano Utente */}
 {/*              </span> */}
 {/*            </div>  */}
-          </div>
+
 
 {/* Mobile hamburger */}
           <div className="md:hidden">
@@ -468,6 +469,7 @@ const tasksForUI = filterTasks(
         </header>
 
         <div className="p-3 md:p-8 max-w-5xl mx-auto space-y-4 md:space-y-6">
+
           {/* Motivation Banner — dinamico e personalizzato */}
           {(() => {
             const { title, message } = getMotivationalMessage(
@@ -533,6 +535,7 @@ const tasksForUI = filterTasks(
               </div>
             );
           })}
+
           {/* Task List */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -614,6 +617,15 @@ const tasksForUI = filterTasks(
               )}
             </Button>
           </div>
+	  <div className="space-y-4">
+            <button
+              onClick={restartTour}
+              title="Rivedi il tour guidato"
+              className="w-full flex items-center justify-center gap-2 text-xs text-indigo-600 hover:text-indigo-700 font-medium py-1 hover:underline transition-colors" >
+              <PlayCircle className="w-3.5 h-3.5" /> Rivedi il tour guidato della Dashboard
+            </button>
+          </div>
+
         </div>
       </main>
 
@@ -669,6 +681,26 @@ const tasksForUI = filterTasks(
             { icon: "🤖", title: "AI illimitata", desc: "Genera contenuti senza limiti di crediti giornalieri" },
             { icon: "⚡", title: "Auto-scheduler", desc: "Pianifica 7 giorni di attività in 30 secondi" }
           ]}
+        />
+      )}
+
+      {/* ── Product Tour Dashboard ── */}
+      {showTour && user && (
+        <ProductTour
+          steps={getDashboardSteps({
+            firstName: user.firstName,
+            activityType: user.onboarding?.activityType,
+            platform: user.onboarding?.platform,
+            goal: user.onboarding?.goal,
+            targetFollowers: user.onboarding?.targetFollowers,
+            currentFollowers: user.onboarding?.currentFollowers,
+            targetMonths: user.onboarding?.targetMonths,
+            creditsBalance: user.creditsBalance,
+            currentDay: user.currentDay,
+            plan: user.plan,
+          })}
+          onComplete={markSectionDone}
+          onSkip={markSectionDone}
         />
       )}
 

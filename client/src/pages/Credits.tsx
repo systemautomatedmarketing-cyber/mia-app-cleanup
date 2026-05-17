@@ -10,6 +10,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Gift, Zap, Loader2, Star } from "lucide-react";
 import { authFetch } from "@/lib/api";
+import { ProductTour } from "@/components/ProductTour";
+import { useTour } from "@/hooks/use-tour";
+import { getCreditSteps } from "@/lib/tour-steps";
 import { clsx } from "clsx";
 import { PromoBanner, PriceDisplay } from "@/components/PromoBanner";
 import { FULL_PRICES, PROMO_PRICES, isPromoActive } from "@/lib/promo-config";
@@ -84,6 +87,7 @@ export default function Credits() {
   const { toast } = useToast();
   const [code, setCode] = useState("");
   const [loadingPackage, setLoadingPackage] = useState<string | null>(null);
+  const { showTour, markSectionDone } = useTour("credits");
 
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,10 +270,21 @@ export default function Credits() {
               </form>
             </CardContent>
           </Card>
-
         </div>
       </main>
+
+      {showTour && user && (
+        <ProductTour
+          steps={getCreditSteps({
+            creditsBalance: user.creditsBalance,
+            plan: user.plan,
+          })}
+          onComplete={markSectionDone}
+          onSkip={markSectionDone}
+        />
+      )}
     </div>
+
   );
 }
 

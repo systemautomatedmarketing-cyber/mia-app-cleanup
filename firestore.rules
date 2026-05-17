@@ -3,10 +3,12 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     match /users/{userId} {
-      // Solo l'utente autenticato può leggere e modificare il proprio documento
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // NOTA: Le Cloud Functions usano Firebase Admin SDK che bypassa queste rules per design.
-      // NON aggiungere eccezioni per request.auth == null: è una falla di sicurezza.
+
+      // Subcollection deferrals (task rimandati)
+      match /deferrals/{dayId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     match /tasks/{taskId} {

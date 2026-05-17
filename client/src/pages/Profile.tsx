@@ -13,10 +13,13 @@ import { api } from "@shared/routes";
 import {
   User, Mail, Lock, Target, Globe, Briefcase,
   TrendingUp, Edit3, Check, X, Loader2, ChevronDown, ChevronUp,
-  FileText, Shield,
+  FileText, Shield, PlayCircle,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { TermsDialog, PrivacyDialog } from "@/components/LegalDialogs";
+import { ProductTour } from "@/components/ProductTour";
+import { useTour } from "@/hooks/use-tour";
+import { getProfileSteps } from "@/lib/tour-steps";
 
 // Sezione collassabile
 function Section({
@@ -77,6 +80,7 @@ export default function Profile() {
   const { user, updateProfileMutation, updateEmailMutation, updatePasswordMutation } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { showTour, markSectionDone, restartTour } = useTour("profile");
 
   // --- Dati personali ---
   const [firstName, setFirstName] = useState("");
@@ -455,13 +459,35 @@ export default function Profile() {
               />
             </div>
 
-            <p className="text-[10px] text-slate-400 mt-4 text-center">
+            <div className="h-px bg-slate-100 mt-4 mb-3" />
+            <button
+              onClick={restartTour}
+              className="w-full flex items-center justify-center gap-2 text-xs text-indigo-600 hover:text-indigo-700 font-medium py-1 hover:underline transition-colors"
+            >
+              <PlayCircle className="w-3.5 h-3.5" />
+              Rivedi il tour guidato del Profilo
+            </button>
+            <p className="text-[10px] text-slate-400 mt-2 text-center">
               Social Growth Engine · info@webstudioams.it
             </p>
           </div>
 
         </div>
       </main>
+
+      {/* ── Product Tour Profilo ── */}
+      {showTour && user && (
+        <ProductTour
+          steps={getProfileSteps({
+            firstName: user.firstName,
+            platform: user.onboarding?.platform,
+            goal: user.onboarding?.goal,
+            targetFollowers: user.onboarding?.targetFollowers,
+          })}
+          onComplete={markSectionDone}
+          onSkip={markSectionDone}
+        />
+      )}
     </div>
   );
 }
